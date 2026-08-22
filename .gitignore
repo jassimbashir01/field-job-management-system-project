@@ -1,41 +1,51 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# Dependencies
+node_modules
+.pnp
 .pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
+# Build output
+.next
+out
+build
+.open-next
 .vercel
+.turbo
 
-# typescript
-*.tsbuildinfo
+# Generated types
 next-env.d.ts
+cloudflare-env.d.ts
+
+# Environment — NEVER commit any of these
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+
+# Real client names, domains, deployment details. Never public.
+private/
+
+# Local database dumps and uploads
+*.dump
+*.sqlite
+/tmp
+/uploads
+
+# Testing
+coverage
+playwright-report
+test-results
+.playwright
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
