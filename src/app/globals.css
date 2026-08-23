@@ -26,7 +26,8 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
 
-  /* Job status colours. One shared token system.*/
+  /* Job status colours (§1.11). One shared token system — later phases add
+     quote/invoice/holiday/punch tokens here, never invent new ones inline. */
   --status-draft: oklch(0.556 0 0);
   --status-scheduled: oklch(0.62 0.14 250);
   --status-assigned: oklch(0.62 0.14 250);
@@ -109,6 +110,8 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Team Member PWA is used outdoors, on phones, sometimes with gloves.
+     Never let a tap target fall below the platform minimum (§1.15). */
   @media (pointer: coarse) {
     button,
     [role="button"],
