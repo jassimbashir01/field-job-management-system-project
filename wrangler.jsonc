@@ -3,8 +3,6 @@
   "name": "field-job-management-system",
   "main": ".open-next/worker.js",
 
-  // Dates from 2026-08-04 onward enable Node.js compatibility by default.
-  // Explicit flags kept for compatibility with older Wrangler versions.
   "compatibility_date": "2026-08-19",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 
@@ -17,7 +15,9 @@
     "enabled": true,
   },
 
-  // Hyperdrive binding added in Phase 3 — optional, the app falls back to
-  // DATABASE_URL when it's absent, so non-Cloudflare targets are unaffected.
-  // "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<created-in-phase-3>" }],
+  "vars": {
+    "DEPLOY_TARGET": "cloudflare",
+  },
+
+  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<your-hyperdrive-id>" }],
 }
