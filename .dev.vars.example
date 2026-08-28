@@ -1,0 +1,2 @@
+# .dev.vars.example
+CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE="postgresql://user:password@host/dbname?sslmode=require"
