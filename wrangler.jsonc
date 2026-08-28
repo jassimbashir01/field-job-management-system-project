@@ -19,10 +19,10 @@
     "DEPLOY_TARGET": "cloudflare",
   },
 
-	"hyperdrive": [
-		{
-			"binding": "HYPERDRIVE",
-			"id": "026ce432d5a041a9813b12afc8866464",
-		},
-	],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "026ce432d5a041a9813b12afc8866464",
+    },
+  ],
 }

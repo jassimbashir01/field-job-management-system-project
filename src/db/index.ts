@@ -13,8 +13,10 @@ const nodePool =
 export const getDb = cache(() => {
   if (process.env.DEPLOY_TARGET === "cloudflare") {
     const { env: cfEnv } = getCloudflareContext();
+    const hyperdrive = (cfEnv as { HYPERDRIVE: { connectionString: string } })
+      .HYPERDRIVE;
     const pool = new Pool({
-      connectionString: cfEnv.HYPERDRIVE.connectionString,
+      connectionString: hyperdrive.connectionString,
       maxUses: 1,
     });
     return drizzle({ client: pool, schema });
