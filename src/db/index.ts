@@ -19,8 +19,8 @@ export const getDb = cache(() => {
       connectionString: hyperdrive.connectionString,
       maxUses: 1,
     });
-    return drizzle({ client: pool, schema });
+    return drizzle({ client: pool, schema, casing: "snake_case" });
   }
 
-  return drizzle({ client: nodePool!, schema });
+  return drizzle({ client: nodePool!, schema, casing: "snake_case" });
 });

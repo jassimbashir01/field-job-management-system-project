@@ -36,4 +36,10 @@ export default defineConfig([
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },
+  {
+    files: ["src/db/seed.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
 ]);
