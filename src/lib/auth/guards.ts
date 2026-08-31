@@ -1,6 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { ForbiddenError, UnauthenticatedError } from "@/lib/errors";
+import { hasPermission, type PermissionKey } from "./permissions";
 import { getSessionUser, type SessionUser } from "./session";
 
 export type Role = SessionUser["role"];
@@ -25,6 +26,17 @@ export async function requireRole(...allowed: Role[]): Promise<SessionUser> {
   const user = await requireUserOrThrow();
   if (user.role === "admin") return user;
   if (!allowed.includes(user.role)) {
+    throw new ForbiddenError();
+  }
+  return user;
+}
+
+export async function requirePermission(
+  permission: PermissionKey,
+): Promise<SessionUser> {
+  const user = await requireUserOrThrow();
+  const allowed = await hasPermission(user, permission);
+  if (!allowed) {
     throw new ForbiddenError();
   }
   return user;
