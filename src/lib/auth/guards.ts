@@ -41,3 +41,25 @@ export async function requirePermission(
   }
   return user;
 }
+
+export async function requireRoleOrRedirect(
+  ...allowed: Role[]
+): Promise<SessionUser> {
+  const user = await requireUser();
+  if (user.role === "admin") return user;
+  if (!allowed.includes(user.role)) {
+    redirect("/forbidden");
+  }
+  return user;
+}
+
+export async function requirePermissionOrRedirect(
+  permission: PermissionKey,
+): Promise<SessionUser> {
+  const user = await requireUser();
+  const allowed = await hasPermission(user, permission);
+  if (!allowed) {
+    redirect("/forbidden");
+  }
+  return user;
+}

@@ -56,7 +56,7 @@ export async function loginAction(
     userAgent: headerList.get("user-agent") ?? undefined,
   });
 
-  redirect("/dashboard");
+  redirect(user.role === "team_member" ? "/mobile" : "/dashboard");
 }
 
 export async function logoutAction(): Promise<void> {

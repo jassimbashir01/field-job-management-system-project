@@ -24,7 +24,8 @@
     "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
     "db:migrate": "dotenv -e .env.local -- drizzle-kit migrate",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
-    "db:seed": "dotenv -e .env.local -- tsx src/db/seed.ts"
+    "db:seed": "dotenv -e .env.local -- tsx src/db/seed.ts",
+    "db:create-test-user": "dotenv -e .env.local -- tsx src/db/create-test-user.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

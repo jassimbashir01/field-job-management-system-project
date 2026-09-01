@@ -37,7 +37,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["src/db/seed.ts"],
+    files: ["src/db/seed.ts", "src/db/create-test-user.ts"],
     rules: {
       "no-console": "off",
     },

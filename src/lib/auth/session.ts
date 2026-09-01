@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
+import { cache } from "react";
 import { getDb } from "@/db";
 import { sessions, users, type userRoleEnum } from "@/db/schema";
 
@@ -48,7 +49,7 @@ export async function createSession(
   });
 }
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const cookieStore = await cookies();
   const rawToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!rawToken) return null;
@@ -85,7 +86,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     jobTitle: row.jobTitle,
     mustChangePassword: row.mustChangePassword,
   };
-}
+});
 
 export async function destroySession(): Promise<void> {
   const cookieStore = await cookies();
