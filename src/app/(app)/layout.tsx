@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRoleOrRedirect } from "@/lib/auth/guards";
 import { NAV_ITEMS } from "@/lib/nav-config";
+import { QUICK_ACTIONS } from "@/lib/quick-actions-config";
+import { QuickActions } from "@/components/shared/quick-actions";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { UserMenu } from "@/components/shared/user-menu";
 
@@ -49,6 +51,8 @@ export default async function AppLayout({
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>
+
+      <QuickActions actions={QUICK_ACTIONS} />
     </div>
   );
 }
