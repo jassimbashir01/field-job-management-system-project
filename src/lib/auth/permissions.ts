@@ -3,20 +3,9 @@ import { cache } from "react";
 import { getDb } from "@/db";
 import { userPermissions } from "@/db/schema";
 import type { SessionUser } from "./session";
+import { PERMISSIONS, type PermissionKey } from "./permission-catalog";
 
-export const PERMISSIONS = {
-  JOBS_CREATE: "jobs:create",
-  JOBS_EDIT: "jobs:edit",
-  JOBS_SCHEDULE: "jobs:schedule",
-  JOBS_ASSIGN: "jobs:assign",
-  CUSTOMERS_MANAGE: "customers:manage",
-  SITES_MANAGE: "sites:manage",
-  TEMPLATES_MANAGE: "templates:manage",
-  REPORTS_VIEW: "reports:view",
-  TEAM_RESET_PASSWORD: "team:reset_password",
-} as const;
-
-export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+export { PERMISSIONS, type PermissionKey };
 
 export const getUserPermissions = cache(
   async (userId: string): Promise<Set<PermissionKey>> => {

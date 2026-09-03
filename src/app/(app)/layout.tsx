@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireRoleOrRedirect } from "@/lib/auth/guards";
 import { NAV_ITEMS } from "@/lib/nav-config";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -15,6 +16,10 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const user = await requireRoleOrRedirect("admin", "manager");
+
+  if (user.mustChangePassword) {
+    redirect("/change-password");
+  }
 
   return (
     <div className="flex min-h-dvh">

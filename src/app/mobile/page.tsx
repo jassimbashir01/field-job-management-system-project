@@ -1,7 +1,14 @@
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/guards";
 import { logoutAction } from "@/lib/auth/actions";
+
 export default async function MobilePlaceholderPage() {
   const user = await requireUser();
+
+  if (user.mustChangePassword) {
+    redirect("/change-password");
+  }
+
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center p-8">
       <div className="max-w-sm text-center">
