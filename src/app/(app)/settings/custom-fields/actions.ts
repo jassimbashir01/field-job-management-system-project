@@ -6,6 +6,7 @@ import * as z from "zod";
 import { getDb } from "@/db";
 import { customFieldDefinitions } from "@/db/schema";
 import { requireRole } from "@/lib/auth/guards";
+import type { EntityType } from "@/lib/custom-fields";
 import { toSafeError, type SafeError } from "@/lib/errors";
 
 function slugify(label: string): string {
@@ -38,6 +39,7 @@ export interface FormState {
 }
 
 export async function createFieldDefinitionAction(
+  entityType: EntityType,
   _prevState: FormState,
   formData: FormData,
 ): Promise<FormState> {
@@ -79,7 +81,7 @@ export async function createFieldDefinitionAction(
 
     const db = getDb();
     await db.insert(customFieldDefinitions).values({
-      entityType: "customer",
+      entityType,
       key: slugify(parsed.data.label),
       label: parsed.data.label,
       fieldType: parsed.data.fieldType,

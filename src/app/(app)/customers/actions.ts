@@ -2,10 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import * as z from "zod";
 import { getDb } from "@/db";
-import { customFieldValues, customerContacts, customers } from "@/db/schema";
+import {
+  customFieldValues,
+  customerContacts,
+  customers,
+  sites,
+} from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/auth/permission-catalog";
 import {
@@ -177,9 +182,16 @@ export async function deleteCustomerAction(
 
     const db = getDb();
     await db.transaction(async (tx) => {
+      const customerSites = await tx
+        .select({ id: sites.id })
+        .from(sites)
+        .where(eq(sites.customerId, customerId));
+
+      const entityIdsToClean = [customerId, ...customerSites.map((s) => s.id)];
+
       await tx
         .delete(customFieldValues)
-        .where(eq(customFieldValues.entityId, customerId));
+        .where(inArray(customFieldValues.entityId, entityIdsToClean));
       await tx.delete(customers).where(eq(customers.id, customerId));
     });
 

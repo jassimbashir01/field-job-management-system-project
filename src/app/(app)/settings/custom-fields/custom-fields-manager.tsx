@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import type { customFieldDefinitions } from "@/db/schema";
 import { useAutoDismiss } from "@/hooks/use-auto-dismiss";
+import type { EntityType } from "@/lib/custom-fields";
 import {
   createFieldDefinitionAction,
   deleteFieldDefinitionAction,
@@ -25,8 +26,10 @@ const SELECT_TYPES = new Set(["select", "multi_select"]);
 type Definition = typeof customFieldDefinitions.$inferSelect;
 
 export function CustomFieldsManager({
+  entityType,
   definitions,
 }: {
+  entityType: EntityType;
   definitions: Definition[];
 }) {
   return (
@@ -41,7 +44,7 @@ export function CustomFieldsManager({
           <DefinitionRow key={definition.id} definition={definition} />
         ))}
       </div>
-      <NewDefinitionForm />
+      <NewDefinitionForm entityType={entityType} />
     </div>
   );
 }
@@ -72,9 +75,10 @@ function DefinitionRow({ definition }: { definition: Definition }) {
   );
 }
 
-function NewDefinitionForm() {
+function NewDefinitionForm({ entityType }: { entityType: EntityType }) {
+  const boundAction = createFieldDefinitionAction.bind(null, entityType);
   const [state, formAction, isPending] = useActionState(
-    createFieldDefinitionAction,
+    boundAction,
     initialState,
   );
   const showMessage = useAutoDismiss(
