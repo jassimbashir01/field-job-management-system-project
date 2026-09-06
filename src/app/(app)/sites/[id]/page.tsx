@@ -13,7 +13,7 @@ export default async function SiteDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requirePermissionOrRedirect(PERMISSIONS.SITES_MANAGE);
+  await requirePermissionOrRedirect(PERMISSIONS.SITES_READ);
   const { id } = await params;
 
   const db = getDb();

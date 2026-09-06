@@ -12,7 +12,7 @@ export default async function SitesPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  await requirePermissionOrRedirect(PERMISSIONS.SITES_MANAGE);
+  await requirePermissionOrRedirect(PERMISSIONS.SITES_READ);
   const { q } = await searchParams;
 
   const db = getDb();

@@ -30,14 +30,13 @@ export default async function EditTeamMemberPage({
   const isManagerResettingTeamMember =
     viewer.role === "manager" &&
     targetUser.role === "team_member" &&
-    (await hasPermission(viewer, PERMISSIONS.TEAM_RESET_PASSWORD));
+    (await hasPermission(viewer, PERMISSIONS.TEAM_WRITE));
 
   if (!isAdmin && !isManagerResettingTeamMember) {
     redirect("/forbidden");
   }
 
   if (!isAdmin) {
-    // Manager path — password reset only, nothing else on this page.
     return (
       <div className="max-w-lg">
         <h1 className="text-xl font-semibold">{targetUser.displayName}</h1>

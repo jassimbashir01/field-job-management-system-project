@@ -83,7 +83,7 @@ export async function createCustomerAction(
   let newCustomerId: string;
 
   try {
-    await requirePermission(PERMISSIONS.CUSTOMERS_MANAGE);
+    await requirePermission(PERMISSIONS.CUSTOMERS_WRITE);
 
     const parsed = customerSchema.safeParse(
       Object.fromEntries(formData.entries()),
@@ -133,7 +133,7 @@ export async function updateCustomerAction(
   formData: FormData,
 ): Promise<FormState> {
   try {
-    await requirePermission(PERMISSIONS.CUSTOMERS_MANAGE);
+    await requirePermission(PERMISSIONS.CUSTOMERS_WRITE);
 
     const parsed = customerSchema.safeParse(
       Object.fromEntries(formData.entries()),
@@ -178,7 +178,7 @@ export async function deleteCustomerAction(
   customerId: string,
 ): Promise<FormState> {
   try {
-    await requirePermission(PERMISSIONS.CUSTOMERS_MANAGE);
+    await requirePermission(PERMISSIONS.CUSTOMERS_DELETE);
 
     const db = getDb();
     await db.transaction(async (tx) => {
@@ -216,7 +216,7 @@ export async function addContactAction(
   formData: FormData,
 ): Promise<FormState> {
   try {
-    await requirePermission(PERMISSIONS.CUSTOMERS_MANAGE);
+    await requirePermission(PERMISSIONS.CUSTOMERS_WRITE);
 
     const parsed = contactSchema.safeParse(
       Object.fromEntries(formData.entries()),
@@ -251,7 +251,7 @@ export async function removeContactAction(
   customerId: string,
   contactId: string,
 ): Promise<void> {
-  await requirePermission(PERMISSIONS.CUSTOMERS_MANAGE);
+  await requirePermission(PERMISSIONS.CUSTOMERS_WRITE);
   const db = getDb();
   await db.delete(customerContacts).where(eq(customerContacts.id, contactId));
   revalidatePath(`/customers/${customerId}`);

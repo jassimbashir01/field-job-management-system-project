@@ -15,7 +15,7 @@ export default async function CustomerDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requirePermissionOrRedirect(PERMISSIONS.CUSTOMERS_MANAGE);
+  await requirePermissionOrRedirect(PERMISSIONS.CUSTOMERS_READ);
   const { id } = await params;
 
   const db = getDb();

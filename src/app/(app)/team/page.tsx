@@ -15,11 +15,12 @@ const ROLE_LABELS: Record<string, string> = {
 export default async function TeamPage() {
   const viewer = await requireUser();
   const isAdmin = viewer.role === "admin";
-  const isManagerResettingTeamMember =
-    viewer.role === "manager" &&
-    (await hasPermission(viewer, PERMISSIONS.TEAM_RESET_PASSWORD));
+  const canReadTeam =
+    isAdmin ||
+    (viewer.role === "manager" &&
+      (await hasPermission(viewer, PERMISSIONS.TEAM_READ)));
 
-  if (!isAdmin && !isManagerResettingTeamMember) {
+  if (!canReadTeam) {
     const { redirect } = await import("next/navigation");
     redirect("/forbidden");
   }

@@ -11,7 +11,7 @@ export default async function NewSitePage({
 }: {
   searchParams: Promise<{ customerId?: string }>;
 }) {
-  await requirePermissionOrRedirect(PERMISSIONS.SITES_MANAGE);
+  await requirePermissionOrRedirect(PERMISSIONS.SITES_WRITE);
   const { customerId } = await searchParams;
 
   const db = getDb();

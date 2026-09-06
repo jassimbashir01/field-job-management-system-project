@@ -3,9 +3,16 @@ import { cache } from "react";
 import { getDb } from "@/db";
 import { userPermissions } from "@/db/schema";
 import type { SessionUser } from "./session";
-import { PERMISSIONS, type PermissionKey } from "./permission-catalog";
+import {
+  PERMISSIONS,
+  RESOURCES,
+  levelsUpTo,
+  permissionKey,
+  type AccessLevel,
+  type PermissionKey,
+} from "./permission-catalog";
 
-export { PERMISSIONS, type PermissionKey };
+export { PERMISSIONS, type PermissionKey, AccessLevel };
 
 export const getUserPermissions = cache(
   async (userId: string): Promise<Set<PermissionKey>> => {
@@ -53,4 +60,31 @@ export async function revokePermission(
         eq(userPermissions.permissionKey, permission),
       ),
     );
+}
+
+export async function setResourceAccess(
+  userId: string,
+  resourceKey: string,
+  level: AccessLevel | "none",
+  grantedByUserId: string,
+): Promise<void> {
+  const resource = RESOURCES.find((r) => r.key === resourceKey);
+  if (!resource) {
+    throw new Error(`Unknown resource: ${resourceKey}`);
+  }
+
+  const levelsToGrant = level === "none" ? [] : levelsUpTo(level);
+  const keysToGrant = new Set(
+    levelsToGrant.map((l) => permissionKey(resourceKey, l)),
+  );
+
+  const allPossibleLevels: AccessLevel[] = ["read", "write", "delete"];
+  for (const l of allPossibleLevels) {
+    const key = permissionKey(resourceKey, l) as PermissionKey;
+    if (keysToGrant.has(key)) {
+      await grantPermission(userId, key, grantedByUserId);
+    } else {
+      await revokePermission(userId, key);
+    }
+  }
 }

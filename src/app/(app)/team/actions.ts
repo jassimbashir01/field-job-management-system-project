@@ -7,11 +7,11 @@ import * as z from "zod";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { requireRole, requireUserOrThrow } from "@/lib/auth/guards";
+import { RESOURCES } from "@/lib/auth/permission-catalog";
 import {
-  grantPermission,
-  revokePermission,
   PERMISSIONS,
-  type PermissionKey,
+  setResourceAccess,
+  type AccessLevel,
 } from "@/lib/auth/permissions";
 import { hashPassword } from "@/lib/auth/password";
 import { createPasswordResetToken } from "@/lib/auth/password-reset";
@@ -74,7 +74,7 @@ const updateUserSchema = z.object({
   displayName: z.string().min(1),
   jobTitle: z.string().optional(),
   role: z.enum(["admin", "manager", "team_member"]),
-  isActive: z.enum(["on"]).optional(), // checkbox: present when checked, absent when not
+  isActive: z.enum(["on"]).optional(),
 });
 
 async function assertNotLastAdmin(targetUserId: string) {
@@ -148,26 +148,18 @@ export async function updateUserAction(
   }
 }
 
-export async function updatePermissionsAction(
+export async function updateAccessLevelsAction(
   userId: string,
   formData: FormData,
 ): Promise<void> {
-  await requireRole("admin");
-
-  const selected = new Set(formData.getAll("permissions") as PermissionKey[]);
-  const current = await import("@/lib/auth/permissions").then((m) =>
-    m.getUserPermissions(userId),
-  );
   const admin = await requireRole("admin");
 
-  for (const permission of Object.values(PERMISSIONS)) {
-    const shouldHave = selected.has(permission);
-    const currentlyHas = current.has(permission);
-    if (shouldHave && !currentlyHas) {
-      await grantPermission(userId, permission, admin.id);
-    } else if (!shouldHave && currentlyHas) {
-      await revokePermission(userId, permission);
-    }
+  for (const resource of RESOURCES) {
+    const submitted = formData.get(`access_${resource.key}`);
+    const level = (submitted === "none" ? "none" : submitted) as
+      AccessLevel | "none" | null;
+    if (!level) continue;
+    await setResourceAccess(userId, resource.key, level, admin.id);
   }
 
   revalidatePath(`/team/${userId}`);
@@ -179,7 +171,7 @@ async function requireCanManagePasswordFor(targetUserId: string) {
 
   if (actor.role === "manager") {
     const { hasPermission } = await import("@/lib/auth/permissions");
-    const allowed = await hasPermission(actor, PERMISSIONS.TEAM_RESET_PASSWORD);
+    const allowed = await hasPermission(actor, PERMISSIONS.TEAM_WRITE);
     if (allowed) {
       const db = getDb();
       const rows = await db

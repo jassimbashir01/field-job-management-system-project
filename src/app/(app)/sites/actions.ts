@@ -82,7 +82,7 @@ export async function createSiteAction(
   let newSiteId: string;
 
   try {
-    await requirePermission(PERMISSIONS.SITES_MANAGE);
+    await requirePermission(PERMISSIONS.SITES_WRITE);
 
     const parsed = siteSchema.safeParse(Object.fromEntries(formData.entries()));
     if (!parsed.success) {
@@ -134,7 +134,7 @@ export async function updateSiteAction(
   formData: FormData,
 ): Promise<FormState> {
   try {
-    await requirePermission(PERMISSIONS.SITES_MANAGE);
+    await requirePermission(PERMISSIONS.SITES_WRITE);
 
     const parsed = siteSchema.safeParse(Object.fromEntries(formData.entries()));
     if (!parsed.success) {
@@ -178,7 +178,7 @@ export async function updateSiteAction(
 
 export async function deleteSiteAction(siteId: string): Promise<FormState> {
   try {
-    await requirePermission(PERMISSIONS.SITES_MANAGE);
+    await requirePermission(PERMISSIONS.SITES_DELETE);
 
     const db = getDb();
     await db.transaction(async (tx) => {

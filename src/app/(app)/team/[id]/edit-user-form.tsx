@@ -13,10 +13,14 @@ import {
 } from "@/components/ui/select";
 import type { users } from "@/db/schema";
 import { useAutoDismiss } from "@/hooks/use-auto-dismiss";
-import { PERMISSIONS, type PermissionKey } from "@/lib/auth/permission-catalog";
+import {
+  RESOURCES,
+  getCurrentLevel,
+  type AccessLevel,
+} from "@/lib/auth/permission-catalog";
 import {
   deleteUserAction,
-  updatePermissionsAction,
+  updateAccessLevelsAction,
   updateUserAction,
   type FormState,
 } from "../actions";
@@ -24,16 +28,11 @@ import { PasswordResetSection } from "./password-reset-section";
 
 const initialFormState: FormState = { success: false, error: null };
 
-const PERMISSION_LABELS: Record<PermissionKey, string> = {
-  [PERMISSIONS.JOBS_CREATE]: "Create jobs",
-  [PERMISSIONS.JOBS_EDIT]: "Edit jobs",
-  [PERMISSIONS.JOBS_SCHEDULE]: "Schedule jobs",
-  [PERMISSIONS.JOBS_ASSIGN]: "Assign technicians",
-  [PERMISSIONS.CUSTOMERS_MANAGE]: "Manage customers",
-  [PERMISSIONS.SITES_MANAGE]: "Manage sites",
-  [PERMISSIONS.TEMPLATES_MANAGE]: "Manage templates",
-  [PERMISSIONS.REPORTS_VIEW]: "View reports",
-  [PERMISSIONS.TEAM_RESET_PASSWORD]: "Reset team member passwords",
+const LEVEL_LABELS: Record<AccessLevel | "none", string> = {
+  none: "No access",
+  read: "Read",
+  write: "Read & Write",
+  delete: "Read, Write & Delete",
 };
 
 type User = typeof users.$inferSelect;
@@ -43,7 +42,7 @@ export function EditUserForm({
   currentPermissions,
 }: {
   user: User;
-  currentPermissions: PermissionKey[];
+  currentPermissions: string[];
 }) {
   return (
     <div className="space-y-10">
@@ -143,36 +142,58 @@ function PermissionsSection({
   currentPermissions,
 }: {
   userId: string;
-  currentPermissions: PermissionKey[];
+  currentPermissions: string[];
 }) {
   const [isPending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const showMessage = useAutoDismiss(savedAt, savedAt !== null);
+  const grantedKeys = new Set(currentPermissions);
 
   return (
     <form
       action={(formData) => {
         startTransition(async () => {
-          await updatePermissionsAction(userId, formData);
+          await updateAccessLevelsAction(userId, formData);
           setSavedAt(Date.now());
         });
       }}
-      className="space-y-3"
+      className="space-y-4"
     >
-      <h2 className="text-sm font-semibold">Permissions</h2>
-      <div className="space-y-2">
-        {Object.values(PERMISSIONS).map((permission) => (
-          <label key={permission} className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="permissions"
-              value={permission}
-              defaultChecked={currentPermissions.includes(permission)}
-              className="size-4"
-            />
-            {PERMISSION_LABELS[permission]}
-          </label>
-        ))}
+      <h2 className="text-sm font-semibold">Access</h2>
+      <div className="space-y-3">
+        {RESOURCES.map((resource) => {
+          const currentLevel = getCurrentLevel(resource.key, grantedKeys);
+          const availableLevels: (AccessLevel | "none")[] = ["none", "read"];
+          if (resource.maxLevel === "write" || resource.maxLevel === "delete") {
+            availableLevels.push("write");
+          }
+          if (resource.maxLevel === "delete") {
+            availableLevels.push("delete");
+          }
+
+          return (
+            <div
+              key={resource.key}
+              className="flex items-center justify-between gap-4"
+            >
+              <Label htmlFor={`access_${resource.key}`} className="flex-1">
+                {resource.label}
+              </Label>
+              <select
+                id={`access_${resource.key}`}
+                name={`access_${resource.key}`}
+                defaultValue={currentLevel}
+                className="rounded-md border border-input px-3 py-2 text-sm"
+              >
+                {availableLevels.map((level) => (
+                  <option key={level} value={level}>
+                    {LEVEL_LABELS[level]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        })}
       </div>
       {showMessage && (
         <p role="status" className="text-sm text-green-600">
@@ -180,7 +201,7 @@ function PermissionsSection({
         </p>
       )}
       <Button type="submit" disabled={isPending} variant="outline">
-        {isPending ? "Saving…" : "Save permissions"}
+        {isPending ? "Saving…" : "Save access"}
       </Button>
     </form>
   );
