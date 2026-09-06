@@ -12,7 +12,7 @@ export default async function CustomersPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  await requirePermissionOrRedirect(PERMISSIONS.CUSTOMERS_MANAGE);
+  await requirePermissionOrRedirect(PERMISSIONS.CUSTOMERS_READ);
   const { q } = await searchParams;
 
   const db = getDb();

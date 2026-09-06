@@ -4,7 +4,7 @@ import { getFieldDefinitions } from "@/lib/custom-fields";
 import { CustomerForm } from "../customer-form";
 
 export default async function NewCustomerPage() {
-  await requirePermissionOrRedirect(PERMISSIONS.CUSTOMERS_MANAGE);
+  await requirePermissionOrRedirect(PERMISSIONS.CUSTOMERS_WRITE);
   const definitions = await getFieldDefinitions("customer");
 
   return (
