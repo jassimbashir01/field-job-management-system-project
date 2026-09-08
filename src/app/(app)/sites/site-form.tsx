@@ -23,12 +23,14 @@ export function SiteForm({
   defaultCustomerId,
   definitions,
   customFieldValues,
+  readOnly = false,
 }: {
   site?: Site;
   customers: Customer[];
   defaultCustomerId?: string;
   definitions: Definition[];
   customFieldValues?: Map<string, CustomFieldValue>;
+  readOnly?: boolean;
 }) {
   const action = site ? updateSiteAction.bind(null, site.id) : createSiteAction;
   const [state, formAction, isPending] = useActionState(action, initialState);
@@ -46,6 +48,7 @@ export function SiteForm({
         defaultCustomerId={defaultCustomerId}
         definitions={definitions}
         customFieldValues={customFieldValues}
+        readOnly={readOnly}
       />
 
       {showMessage && state.error && (
@@ -59,9 +62,11 @@ export function SiteForm({
         </p>
       )}
 
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving…" : site ? "Save changes" : "Create site"}
-      </Button>
+      {!readOnly && (
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Saving…" : site ? "Save changes" : "Create site"}
+        </Button>
+      )}
     </form>
   );
 }
@@ -72,12 +77,14 @@ function SiteFields({
   defaultCustomerId,
   definitions,
   customFieldValues,
+  readOnly,
 }: {
   site?: Site;
   customers: Customer[];
   defaultCustomerId?: string;
   definitions: Definition[];
   customFieldValues?: Map<string, CustomFieldValue>;
+  readOnly: boolean;
 }) {
   return (
     <>
@@ -87,7 +94,8 @@ function SiteFields({
           id="customerId"
           name="customerId"
           defaultValue={site?.customerId ?? defaultCustomerId ?? ""}
-          className="w-full rounded-md border border-input px-3 py-2 text-sm"
+          disabled={readOnly}
+          className="w-full rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
           required
         >
           <option value="" disabled>
@@ -108,6 +116,7 @@ function SiteFields({
           name="name"
           defaultValue={site?.name}
           placeholder="e.g. Main office, Warehouse 2"
+          disabled={readOnly}
           required
         />
       </div>
@@ -118,6 +127,7 @@ function SiteFields({
           id="addressLine1"
           name="addressLine1"
           defaultValue={site?.addressLine1 ?? ""}
+          disabled={readOnly}
         />
       </div>
       <div className="space-y-2">
@@ -126,17 +136,28 @@ function SiteFields({
           id="addressLine2"
           name="addressLine2"
           defaultValue={site?.addressLine2 ?? ""}
+          disabled={readOnly}
         />
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="city">City</Label>
-          <Input id="city" name="city" defaultValue={site?.city ?? ""} />
+          <Input
+            id="city"
+            name="city"
+            defaultValue={site?.city ?? ""}
+            disabled={readOnly}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="region">Region / state</Label>
-          <Input id="region" name="region" defaultValue={site?.region ?? ""} />
+          <Input
+            id="region"
+            name="region"
+            defaultValue={site?.region ?? ""}
+            disabled={readOnly}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="postalCode">Postal code</Label>
@@ -144,13 +165,19 @@ function SiteFields({
             id="postalCode"
             name="postalCode"
             defaultValue={site?.postalCode ?? ""}
+            disabled={readOnly}
           />
         </div>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="country">Country</Label>
-        <Input id="country" name="country" defaultValue={site?.country ?? ""} />
+        <Input
+          id="country"
+          name="country"
+          defaultValue={site?.country ?? ""}
+          disabled={readOnly}
+        />
       </div>
 
       <div className="space-y-2">
@@ -160,6 +187,7 @@ function SiteFields({
           name="accessNotes"
           placeholder="Gate codes, parking, where to find the technician entrance…"
           defaultValue={site?.accessNotes ?? ""}
+          disabled={readOnly}
         />
       </div>
 
@@ -170,6 +198,7 @@ function SiteFields({
               key={definition.id}
               definition={definition}
               defaultValue={customFieldValues?.get(definition.id)}
+              disabled={readOnly}
             />
           ))}
         </div>

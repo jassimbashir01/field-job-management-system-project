@@ -2,8 +2,8 @@ import Link from "next/link";
 import { asc, ilike, or } from "drizzle-orm";
 import { getDb } from "@/db";
 import { customers } from "@/db/schema";
-import { requirePermissionOrRedirect } from "@/lib/auth/guards";
-import { PERMISSIONS } from "@/lib/auth/permission-catalog";
+import { requireUser } from "@/lib/auth/guards";
+import { getResourceAccess } from "@/lib/auth/permissions";
 import { Button } from "@/components/ui/button";
 import { CustomerSearchInput } from "./search-input";
 
@@ -12,7 +12,13 @@ export default async function CustomersPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  await requirePermissionOrRedirect(PERMISSIONS.CUSTOMERS_READ);
+  const viewer = await requireUser();
+  const access = await getResourceAccess(viewer, "customers");
+  if (!access.canRead) {
+    const { redirect } = await import("next/navigation");
+    redirect("/forbidden");
+  }
+
   const { q } = await searchParams;
 
   const db = getDb();
@@ -36,10 +42,12 @@ export default async function CustomersPage({
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Customers</h1>
-        <Button
-          render={<Link href="/customers/new">New customer</Link>}
-          nativeButton={false}
-        />
+        {access.canWrite && (
+          <Button
+            render={<Link href="/customers/new">New customer</Link>}
+            nativeButton={false}
+          />
+        )}
       </div>
 
       <form method="get" className="mt-4">

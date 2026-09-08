@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRoleOrRedirect } from "@/lib/auth/guards";
+import { getUserAccessLevels } from "@/lib/auth/permissions";
 import { NAV_ITEMS } from "@/lib/nav-config";
 import { QUICK_ACTIONS } from "@/lib/quick-actions-config";
 import { QuickActions } from "@/components/shared/quick-actions";
@@ -23,11 +24,27 @@ export default async function AppLayout({
     redirect("/change-password");
   }
 
+  const isAdmin = user.role === "admin";
+  const accessLevels = await getUserAccessLevels(user);
+
+  const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly) return isAdmin;
+    if (!item.resourceKey) return true;
+    if (isAdmin) return true;
+    return accessLevels[item.resourceKey] !== "none";
+  });
+
+  const visibleQuickActions = QUICK_ACTIONS.filter((action) => {
+    if (isAdmin) return true;
+    const level = accessLevels[action.resourceKey];
+    return level === "write" || level === "delete";
+  });
+
   return (
     <div className="flex min-h-dvh">
       <aside className="bg-sidebar hidden w-56 shrink-0 border-r p-4 md:block">
         <nav aria-label="Main navigation" className="space-y-1">
-          {NAV_ITEMS.map((item) => (
+          {visibleNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -52,7 +69,7 @@ export default async function AppLayout({
         <main className="flex-1 p-6">{children}</main>
       </div>
 
-      <QuickActions actions={QUICK_ACTIONS} />
+      <QuickActions actions={visibleQuickActions} />
     </div>
   );
 }

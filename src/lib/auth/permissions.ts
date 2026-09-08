@@ -6,6 +6,7 @@ import type { SessionUser } from "./session";
 import {
   PERMISSIONS,
   RESOURCES,
+  getCurrentLevel,
   levelsUpTo,
   permissionKey,
   type AccessLevel,
@@ -13,6 +14,12 @@ import {
 } from "./permission-catalog";
 
 export { PERMISSIONS, type PermissionKey, AccessLevel };
+
+export interface ResourceAccess {
+  canRead: boolean;
+  canWrite: boolean;
+  canDelete: boolean;
+}
 
 export const getUserPermissions = cache(
   async (userId: string): Promise<Set<PermissionKey>> => {
@@ -87,4 +94,41 @@ export async function setResourceAccess(
       await revokePermission(userId, key);
     }
   }
+}
+
+export async function getResourceAccess(
+  user: SessionUser,
+  resourceKey: string,
+): Promise<ResourceAccess> {
+  if (user.role === "admin") {
+    return { canRead: true, canWrite: true, canDelete: true };
+  }
+  if (user.role !== "manager") {
+    return { canRead: false, canWrite: false, canDelete: false };
+  }
+
+  const granted = await getUserPermissions(user.id);
+  const level = getCurrentLevel(resourceKey, granted);
+
+  return {
+    canRead: level !== "none",
+    canWrite: level === "write" || level === "delete",
+    canDelete: level === "delete",
+  };
+}
+
+export async function getUserAccessLevels(
+  user: SessionUser,
+): Promise<Record<string, AccessLevel | "none">> {
+  if (user.role === "admin") {
+    return Object.fromEntries(RESOURCES.map((r) => [r.key, "delete" as const]));
+  }
+  if (user.role !== "manager") {
+    return Object.fromEntries(RESOURCES.map((r) => [r.key, "none" as const]));
+  }
+
+  const granted = await getUserPermissions(user.id);
+  return Object.fromEntries(
+    RESOURCES.map((r) => [r.key, getCurrentLevel(r.key, granted)]),
+  );
 }

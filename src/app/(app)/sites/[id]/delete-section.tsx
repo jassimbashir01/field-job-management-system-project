@@ -8,11 +8,19 @@ import { deleteSiteAction } from "../actions";
 
 type Site = typeof sites.$inferSelect;
 
-export function SiteDeleteSection({ site }: { site: Site }) {
+export function SiteDeleteSection({
+  site,
+  canDelete,
+}: {
+  site: Site;
+  canDelete: boolean;
+}) {
   const [confirming, setConfirming] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  if (!canDelete) return null;
 
   if (!confirming) {
     return (

@@ -9,9 +9,11 @@ type Definition = typeof customFieldDefinitions.$inferSelect;
 export function CustomFieldInput({
   definition,
   defaultValue,
+  disabled,
 }: {
   definition: Definition;
   defaultValue: unknown;
+  disabled?: boolean;
 }) {
   const name = `custom_${definition.id}`;
 
@@ -23,6 +25,7 @@ export function CustomFieldInput({
             type="checkbox"
             name={name}
             defaultChecked={defaultValue === true}
+            disabled={disabled}
             className="size-4"
           />
           {definition.label}
@@ -37,7 +40,8 @@ export function CustomFieldInput({
             id={name}
             name={name}
             defaultValue={typeof defaultValue === "string" ? defaultValue : ""}
-            className="w-full rounded-md border border-input px-3 py-2 text-sm"
+            disabled={disabled}
+            className="w-full rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
             required={definition.required}
           >
             <option value="">—</option>
@@ -63,6 +67,7 @@ export function CustomFieldInput({
                   name={name}
                   value={option}
                   defaultChecked={selected.includes(option)}
+                  disabled={disabled}
                   className="size-4"
                 />
                 {option}
@@ -82,6 +87,7 @@ export function CustomFieldInput({
             name={name}
             type="date"
             defaultValue={typeof defaultValue === "string" ? defaultValue : ""}
+            disabled={disabled}
             required={definition.required}
           />
         </div>
@@ -98,6 +104,7 @@ export function CustomFieldInput({
             type="number"
             step={definition.fieldType === "decimal" ? "any" : "1"}
             defaultValue={typeof defaultValue === "number" ? defaultValue : ""}
+            disabled={disabled}
             required={definition.required}
           />
         </div>
@@ -118,12 +125,14 @@ export function CustomFieldInput({
               step="any"
               defaultValue={measurement.value ?? ""}
               placeholder="Value"
+              disabled={disabled}
               required={definition.required}
             />
             <Input
               name={`${name}_unit`}
               defaultValue={measurement.unit ?? ""}
               placeholder="Unit"
+              disabled={disabled}
               className="max-w-24"
             />
           </div>
@@ -140,6 +149,7 @@ export function CustomFieldInput({
             id={name}
             name={name}
             defaultValue={typeof defaultValue === "string" ? defaultValue : ""}
+            disabled={disabled}
             required={definition.required}
           />
         </div>

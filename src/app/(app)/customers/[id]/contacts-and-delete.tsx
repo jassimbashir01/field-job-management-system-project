@@ -21,9 +21,11 @@ type Contact = typeof customerContacts.$inferSelect;
 export function ContactsSection({
   customerId,
   contacts,
+  canWrite,
 }: {
   customerId: string;
   contacts: Contact[];
+  canWrite: boolean;
 }) {
   const boundAddAction = addContactAction.bind(null, customerId);
   const [state, formAction, isPending] = useActionState(
@@ -55,74 +57,91 @@ export function ContactsSection({
                     .join(" · ")}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  startRemoveTransition(() =>
-                    removeContactAction(customerId, contact.id),
-                  )
-                }
-              >
-                Remove
-              </Button>
+              {canWrite && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    startRemoveTransition(() =>
+                      removeContactAction(customerId, contact.id),
+                    )
+                  }
+                >
+                  Remove
+                </Button>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      <form action={formAction} className="space-y-2 rounded-md border p-4">
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label htmlFor="contact-name" className="sr-only">
-              Name
-            </Label>
-            <Input id="contact-name" name="name" placeholder="Name" required />
+      {canWrite && (
+        <form action={formAction} className="space-y-2 rounded-md border p-4">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label htmlFor="contact-name" className="sr-only">
+                Name
+              </Label>
+              <Input
+                id="contact-name"
+                name="name"
+                placeholder="Name"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="contact-title" className="sr-only">
+                Title
+              </Label>
+              <Input id="contact-title" name="title" placeholder="Title" />
+            </div>
           </div>
-          <div>
-            <Label htmlFor="contact-title" className="sr-only">
-              Title
-            </Label>
-            <Input id="contact-title" name="title" placeholder="Title" />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label htmlFor="contact-phone" className="sr-only">
+                Phone
+              </Label>
+              <Input id="contact-phone" name="phone" placeholder="Phone" />
+            </div>
+            <div>
+              <Label htmlFor="contact-email" className="sr-only">
+                Email
+              </Label>
+              <Input
+                id="contact-email"
+                name="email"
+                type="email"
+                placeholder="Email"
+              />
+            </div>
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label htmlFor="contact-phone" className="sr-only">
-              Phone
-            </Label>
-            <Input id="contact-phone" name="phone" placeholder="Phone" />
-          </div>
-          <div>
-            <Label htmlFor="contact-email" className="sr-only">
-              Email
-            </Label>
-            <Input
-              id="contact-email"
-              name="email"
-              type="email"
-              placeholder="Email"
-            />
-          </div>
-        </div>
-        {showMessage && state.error && (
-          <p role="alert" className="text-sm text-destructive">
-            {state.error.message}
-          </p>
-        )}
-        <Button type="submit" variant="outline" disabled={isPending}>
-          {isPending ? "Adding…" : "Add contact"}
-        </Button>
-      </form>
+          {showMessage && state.error && (
+            <p role="alert" className="text-sm text-destructive">
+              {state.error.message}
+            </p>
+          )}
+          <Button type="submit" variant="outline" disabled={isPending}>
+            {isPending ? "Adding…" : "Add contact"}
+          </Button>
+        </form>
+      )}
     </div>
   );
 }
 
-export function CustomerDeleteSection({ customer }: { customer: Customer }) {
+export function CustomerDeleteSection({
+  customer,
+  canDelete,
+}: {
+  customer: Customer;
+  canDelete: boolean;
+}) {
   const [confirming, setConfirming] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  if (!canDelete) return null;
 
   if (!confirming) {
     return (

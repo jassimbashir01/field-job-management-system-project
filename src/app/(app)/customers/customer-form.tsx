@@ -24,10 +24,12 @@ export function CustomerForm({
   customer,
   definitions,
   customFieldValues,
+  readOnly = false,
 }: {
   customer?: Customer;
   definitions: Definition[];
   customFieldValues?: Map<string, CustomFieldValue>;
+  readOnly?: boolean;
 }) {
   const action = customer
     ? updateCustomerAction.bind(null, customer.id)
@@ -45,6 +47,7 @@ export function CustomerForm({
         customer={customer}
         definitions={definitions}
         customFieldValues={customFieldValues}
+        readOnly={readOnly}
       />
 
       {showMessage && state.error && (
@@ -58,9 +61,15 @@ export function CustomerForm({
         </p>
       )}
 
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving…" : customer ? "Save changes" : "Create customer"}
-      </Button>
+      {!readOnly && (
+        <Button type="submit" disabled={isPending}>
+          {isPending
+            ? "Saving…"
+            : customer
+              ? "Save changes"
+              : "Create customer"}
+        </Button>
+      )}
     </form>
   );
 }
@@ -69,16 +78,24 @@ function CustomerFields({
   customer,
   definitions,
   customFieldValues,
+  readOnly,
 }: {
   customer?: Customer;
   definitions: Definition[];
   customFieldValues?: Map<string, CustomFieldValue>;
+  readOnly: boolean;
 }) {
   return (
     <>
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
-        <Input id="name" name="name" defaultValue={customer?.name} required />
+        <Input
+          id="name"
+          name="name"
+          defaultValue={customer?.name}
+          disabled={readOnly}
+          required
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="companyName">Company name</Label>
@@ -86,12 +103,18 @@ function CustomerFields({
           id="companyName"
           name="companyName"
           defaultValue={customer?.companyName ?? ""}
+          disabled={readOnly}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
-          <Input id="phone" name="phone" defaultValue={customer?.phone ?? ""} />
+          <Input
+            id="phone"
+            name="phone"
+            defaultValue={customer?.phone ?? ""}
+            disabled={readOnly}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -100,6 +123,7 @@ function CustomerFields({
             name="email"
             type="email"
             defaultValue={customer?.email ?? ""}
+            disabled={readOnly}
           />
         </div>
       </div>
@@ -109,6 +133,7 @@ function CustomerFields({
           id="notes"
           name="notes"
           defaultValue={customer?.notes ?? ""}
+          disabled={readOnly}
         />
       </div>
 
@@ -119,6 +144,7 @@ function CustomerFields({
               key={definition.id}
               definition={definition}
               defaultValue={customFieldValues?.get(definition.id)}
+              disabled={readOnly}
             />
           ))}
         </div>

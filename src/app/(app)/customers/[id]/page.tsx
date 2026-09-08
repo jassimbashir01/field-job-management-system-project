@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { customerContacts, customers, sites } from "@/db/schema";
-import { requirePermissionOrRedirect } from "@/lib/auth/guards";
-import { PERMISSIONS } from "@/lib/auth/permission-catalog";
+import { requireUser } from "@/lib/auth/guards";
+import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions, getFieldValues } from "@/lib/custom-fields";
 import { Button } from "@/components/ui/button";
 import { CustomerForm } from "../customer-form";
@@ -15,7 +15,13 @@ export default async function CustomerDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requirePermissionOrRedirect(PERMISSIONS.CUSTOMERS_READ);
+  const viewer = await requireUser();
+  const access = await getResourceAccess(viewer, "customers");
+  if (!access.canRead) {
+    const { redirect } = await import("next/navigation");
+    redirect("/forbidden");
+  }
+
   const { id } = await params;
 
   const db = getDb();
@@ -50,26 +56,34 @@ export default async function CustomerDetailPage({
     <div className="max-w-lg space-y-10">
       <div>
         <h1 className="text-xl font-semibold">{customer.name}</h1>
+        {!access.canWrite && (
+          <p className="mt-1 text-sm text-muted-foreground">
+            You have read-only access to Customers.
+          </p>
+        )}
         <CustomerForm
           customer={customer}
           definitions={definitions}
           customFieldValues={fieldValues}
+          readOnly={!access.canWrite}
         />
       </div>
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Sites</h2>
-          <Button
-            variant="outline"
-            size="sm"
-            render={
-              <Link href={`/sites/new?customerId=${customer.id}`}>
-                Add site
-              </Link>
-            }
-            nativeButton={false}
-          />
+          {access.canWrite && (
+            <Button
+              variant="outline"
+              size="sm"
+              render={
+                <Link href={`/sites/new?customerId=${customer.id}`}>
+                  Add site
+                </Link>
+              }
+              nativeButton={false}
+            />
+          )}
         </div>
         {customerSites.length === 0 ? (
           <p className="text-sm text-muted-foreground">No sites yet.</p>
@@ -94,8 +108,12 @@ export default async function CustomerDetailPage({
         )}
       </div>
 
-      <ContactsSection customerId={customer.id} contacts={contacts} />
-      <CustomerDeleteSection customer={customer} />
+      <ContactsSection
+        customerId={customer.id}
+        contacts={contacts}
+        canWrite={access.canWrite}
+      />
+      <CustomerDeleteSection customer={customer} canDelete={access.canDelete} />
     </div>
   );
 }
