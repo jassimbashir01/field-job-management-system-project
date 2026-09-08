@@ -147,7 +147,6 @@ function PermissionsSection({
   const [isPending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const showMessage = useAutoDismiss(savedAt, savedAt !== null);
-  const grantedKeys = new Set(currentPermissions);
 
   return (
     <form
@@ -160,41 +159,10 @@ function PermissionsSection({
       className="space-y-4"
     >
       <h2 className="text-sm font-semibold">Access</h2>
-      <div className="space-y-3">
-        {RESOURCES.map((resource) => {
-          const currentLevel = getCurrentLevel(resource.key, grantedKeys);
-          const availableLevels: (AccessLevel | "none")[] = ["none", "read"];
-          if (resource.maxLevel === "write" || resource.maxLevel === "delete") {
-            availableLevels.push("write");
-          }
-          if (resource.maxLevel === "delete") {
-            availableLevels.push("delete");
-          }
-
-          return (
-            <div
-              key={resource.key}
-              className="flex items-center justify-between gap-4"
-            >
-              <Label htmlFor={`access_${resource.key}`} className="flex-1">
-                {resource.label}
-              </Label>
-              <select
-                id={`access_${resource.key}`}
-                name={`access_${resource.key}`}
-                defaultValue={currentLevel}
-                className="rounded-md border border-input px-3 py-2 text-sm"
-              >
-                {availableLevels.map((level) => (
-                  <option key={level} value={level}>
-                    {LEVEL_LABELS[level]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          );
-        })}
-      </div>
+      <AccessLevelFields
+        key={currentPermissions.slice().sort().join(",")}
+        currentPermissions={currentPermissions}
+      />
       {showMessage && (
         <p role="status" className="text-sm text-green-600">
           Saved.
@@ -204,6 +172,52 @@ function PermissionsSection({
         {isPending ? "Saving…" : "Save access"}
       </Button>
     </form>
+  );
+}
+
+function AccessLevelFields({
+  currentPermissions,
+}: {
+  currentPermissions: string[];
+}) {
+  const grantedKeys = new Set(currentPermissions);
+
+  return (
+    <div className="space-y-3">
+      {RESOURCES.map((resource) => {
+        const currentLevel = getCurrentLevel(resource.key, grantedKeys);
+        const availableLevels: (AccessLevel | "none")[] = ["none", "read"];
+        if (resource.maxLevel === "write" || resource.maxLevel === "delete") {
+          availableLevels.push("write");
+        }
+        if (resource.maxLevel === "delete") {
+          availableLevels.push("delete");
+        }
+
+        return (
+          <div
+            key={resource.key}
+            className="flex items-center justify-between gap-4"
+          >
+            <Label htmlFor={`access_${resource.key}`} className="flex-1">
+              {resource.label}
+            </Label>
+            <select
+              id={`access_${resource.key}`}
+              name={`access_${resource.key}`}
+              defaultValue={currentLevel}
+              className="rounded-md border border-input px-3 py-2 text-sm"
+            >
+              {availableLevels.map((level) => (
+                <option key={level} value={level}>
+                  {LEVEL_LABELS[level]}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
