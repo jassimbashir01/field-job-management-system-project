@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { getDb } from "@/db";
 import { companies } from "@/db/schema";
-import { requireRoleOrRedirect } from "@/lib/auth/guards";
+import { requireUser } from "@/lib/auth/guards";
 import { Button } from "@/components/ui/button";
+import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { SettingsForm } from "./settings-form";
 
 export default async function SettingsPage() {
-  await requireRoleOrRedirect("admin");
+  const viewer = await requireUser();
+  if (viewer.role !== "admin") {
+    return <ForbiddenMessage />;
+  }
 
   const db = getDb();
   const rows = await db.select().from(companies).limit(1);
@@ -28,7 +32,6 @@ export default async function SettingsPage() {
         This information appears on quotes, invoices, and anywhere else a
         customer sees your branding.
       </p>
-
       <SettingsForm company={company} />
 
       <div className="mt-10 border-t pt-6">

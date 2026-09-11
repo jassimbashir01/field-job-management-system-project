@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions, getFieldValues } from "@/lib/custom-fields";
 import { Button } from "@/components/ui/button";
+import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { CustomerForm } from "../customer-form";
 import { ContactsSection, CustomerDeleteSection } from "./contacts-and-delete";
 
@@ -18,8 +19,7 @@ export default async function CustomerDetailPage({
   const viewer = await requireUser();
   const access = await getResourceAccess(viewer, "customers");
   if (!access.canRead) {
-    const { redirect } = await import("next/navigation");
-    redirect("/forbidden");
+    return <ForbiddenMessage />;
   }
 
   const { id } = await params;

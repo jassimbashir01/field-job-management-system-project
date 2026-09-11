@@ -5,6 +5,7 @@ import { customers } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
 import { Button } from "@/components/ui/button";
+import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { CustomerSearchInput } from "./search-input";
 
 export default async function CustomersPage({
@@ -15,8 +16,7 @@ export default async function CustomersPage({
   const viewer = await requireUser();
   const access = await getResourceAccess(viewer, "customers");
   if (!access.canRead) {
-    const { redirect } = await import("next/navigation");
-    redirect("/forbidden");
+    return <ForbiddenMessage />;
   }
 
   const { q } = await searchParams;

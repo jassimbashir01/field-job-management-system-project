@@ -5,6 +5,7 @@ import { users } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
 import { hasPermission, PERMISSIONS } from "@/lib/auth/permissions";
 import { Button } from "@/components/ui/button";
+import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
@@ -21,8 +22,7 @@ export default async function TeamPage() {
       (await hasPermission(viewer, PERMISSIONS.TEAM_READ)));
 
   if (!canReadTeam) {
-    const { redirect } = await import("next/navigation");
-    redirect("/forbidden");
+    return <ForbiddenMessage />;
   }
 
   const db = getDb();

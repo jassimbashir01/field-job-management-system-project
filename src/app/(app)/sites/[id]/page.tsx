@@ -5,6 +5,7 @@ import { customers, sites } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions, getFieldValues } from "@/lib/custom-fields";
+import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { SiteForm } from "../site-form";
 import { SiteDeleteSection } from "./delete-section";
 
@@ -16,8 +17,7 @@ export default async function SiteDetailPage({
   const viewer = await requireUser();
   const access = await getResourceAccess(viewer, "sites");
   if (!access.canRead) {
-    const { redirect } = await import("next/navigation");
-    redirect("/forbidden");
+    return <ForbiddenMessage />;
   }
 
   const { id } = await params;

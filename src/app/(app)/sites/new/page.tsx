@@ -1,9 +1,10 @@
 import { asc } from "drizzle-orm";
 import { getDb } from "@/db";
 import { customers } from "@/db/schema";
-import { requirePermissionOrRedirect } from "@/lib/auth/guards";
-import { PERMISSIONS } from "@/lib/auth/permission-catalog";
+import { requireUser } from "@/lib/auth/guards";
+import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions } from "@/lib/custom-fields";
+import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { SiteForm } from "../site-form";
 
 export default async function NewSitePage({
@@ -11,7 +12,12 @@ export default async function NewSitePage({
 }: {
   searchParams: Promise<{ customerId?: string }>;
 }) {
-  await requirePermissionOrRedirect(PERMISSIONS.SITES_WRITE);
+  const viewer = await requireUser();
+  const access = await getResourceAccess(viewer, "sites");
+  if (!access.canWrite) {
+    return <ForbiddenMessage />;
+  }
+
   const { customerId } = await searchParams;
 
   const db = getDb();

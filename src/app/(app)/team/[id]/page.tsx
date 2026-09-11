@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
@@ -8,6 +8,7 @@ import {
   hasPermission,
   PERMISSIONS,
 } from "@/lib/auth/permissions";
+import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { EditUserForm } from "./edit-user-form";
 import { PasswordResetSection } from "./password-reset-section";
 
@@ -33,7 +34,7 @@ export default async function EditTeamMemberPage({
     (await hasPermission(viewer, PERMISSIONS.TEAM_WRITE));
 
   if (!isAdmin && !isManagerResettingTeamMember) {
-    redirect("/forbidden");
+    return <ForbiddenMessage />;
   }
 
   if (!isAdmin) {

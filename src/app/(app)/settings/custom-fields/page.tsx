@@ -2,8 +2,9 @@ import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { customFieldDefinitions } from "@/db/schema";
-import { requireRoleOrRedirect } from "@/lib/auth/guards";
+import { requireUser } from "@/lib/auth/guards";
 import type { EntityType } from "@/lib/custom-fields";
+import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { CustomFieldsManager } from "./custom-fields-manager";
 
 const TABS: { entityType: EntityType; label: string }[] = [
@@ -16,7 +17,11 @@ export default async function CustomFieldsSettingsPage({
 }: {
   searchParams: Promise<{ entity?: string }>;
 }) {
-  await requireRoleOrRedirect("admin");
+  const viewer = await requireUser();
+  if (viewer.role !== "admin") {
+    return <ForbiddenMessage />;
+  }
+
   const { entity } = await searchParams;
   const activeEntity: EntityType = entity === "site" ? "site" : "customer";
 

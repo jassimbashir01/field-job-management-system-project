@@ -1,10 +1,16 @@
-import { requirePermissionOrRedirect } from "@/lib/auth/guards";
-import { PERMISSIONS } from "@/lib/auth/permission-catalog";
+import { requireUser } from "@/lib/auth/guards";
+import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions } from "@/lib/custom-fields";
+import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { CustomerForm } from "../customer-form";
 
 export default async function NewCustomerPage() {
-  await requirePermissionOrRedirect(PERMISSIONS.CUSTOMERS_WRITE);
+  const viewer = await requireUser();
+  const access = await getResourceAccess(viewer, "customers");
+  if (!access.canWrite) {
+    return <ForbiddenMessage />;
+  }
+
   const definitions = await getFieldDefinitions("customer");
 
   return (
