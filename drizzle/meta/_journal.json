@@ -29,6 +29,13 @@
       "when": 1788521671255,
       "tag": "0003_absurd_black_tom",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789196532451,
+      "tag": "0004_furry_scrambler",
+      "breakpoints": true
     }
   ]
 }

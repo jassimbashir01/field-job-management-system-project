@@ -6,15 +6,10 @@ export interface ResourceConfig {
   maxLevel: AccessLevel;
 }
 
-/**
- * Every resource a permission level can apply to, across the whole
- * project. Extended purely in code as each phase adds one — "equipment"
- * (Phase 10), "jobs" (Phase 11), and onward. Adding a resource here is
- * never a migration.
- */
 export const RESOURCES: ResourceConfig[] = [
   { key: "customers", label: "Customers", maxLevel: "delete" },
   { key: "sites", label: "Sites", maxLevel: "delete" },
+  { key: "equipment", label: "Equipment", maxLevel: "delete" },
   { key: "team", label: "Team (view + reset passwords)", maxLevel: "write" },
 ];
 
@@ -49,6 +44,9 @@ export const PERMISSIONS = {
   SITES_READ: permissionKey("sites", "read"),
   SITES_WRITE: permissionKey("sites", "write"),
   SITES_DELETE: permissionKey("sites", "delete"),
+  EQUIPMENT_READ: permissionKey("equipment", "read"),
+  EQUIPMENT_WRITE: permissionKey("equipment", "write"),
+  EQUIPMENT_DELETE: permissionKey("equipment", "delete"),
   TEAM_READ: permissionKey("team", "read"),
   TEAM_WRITE: permissionKey("team", "write"),
 } as const;

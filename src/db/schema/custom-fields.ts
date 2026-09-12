@@ -13,6 +13,7 @@ import {
 export const customFieldEntityTypeEnum = pgEnum("custom_field_entity_type", [
   "customer",
   "site",
+  "equipment",
 ]);
 
 export const customFieldTypeEnum = pgEnum("custom_field_type", [

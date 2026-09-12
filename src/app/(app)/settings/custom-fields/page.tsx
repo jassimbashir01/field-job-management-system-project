@@ -10,6 +10,7 @@ import { CustomFieldsManager } from "./custom-fields-manager";
 const TABS: { entityType: EntityType; label: string }[] = [
   { entityType: "customer", label: "Customers" },
   { entityType: "site", label: "Sites" },
+  { entityType: "equipment", label: "Equipment" },
 ];
 
 export default async function CustomFieldsSettingsPage({
@@ -23,7 +24,8 @@ export default async function CustomFieldsSettingsPage({
   }
 
   const { entity } = await searchParams;
-  const activeEntity: EntityType = entity === "site" ? "site" : "customer";
+  const activeEntity: EntityType =
+    TABS.find((tab) => tab.entityType === entity)?.entityType ?? "customer";
 
   const db = getDb();
   const definitions = await db

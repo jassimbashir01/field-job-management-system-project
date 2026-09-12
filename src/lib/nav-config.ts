@@ -1,5 +1,12 @@
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, MapPin, Settings, Users2, Users } from "lucide-react";
+import {
+  LayoutDashboard,
+  MapPin,
+  Settings,
+  Users2,
+  Users,
+  Wrench,
+} from "lucide-react";
 
 export interface NavItem {
   label: string;
@@ -18,6 +25,12 @@ export const NAV_ITEMS: NavItem[] = [
     resourceKey: "customers",
   },
   { label: "Sites", href: "/sites", icon: MapPin, resourceKey: "sites" },
+  {
+    label: "Equipment",
+    href: "/equipment",
+    icon: Wrench,
+    resourceKey: "equipment",
+  },
   { label: "Team", href: "/team", icon: Users, resourceKey: "team" },
   { label: "Settings", href: "/settings", icon: Settings, adminOnly: true },
 ];

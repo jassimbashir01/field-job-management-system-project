@@ -11,4 +11,9 @@ export const QUICK_ACTIONS: QuickActionConfig[] = [
     resourceKey: "customers",
   },
   { label: "Create Site", href: "/sites/new", resourceKey: "sites" },
+  {
+    label: "Create Equipment",
+    href: "/equipment/new",
+    resourceKey: "equipment",
+  },
 ];
