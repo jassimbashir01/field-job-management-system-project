@@ -15,12 +15,6 @@ import {
 
 export { PERMISSIONS, type PermissionKey, AccessLevel };
 
-export interface ResourceAccess {
-  canRead: boolean;
-  canWrite: boolean;
-  canDelete: boolean;
-}
-
 export const getUserPermissions = cache(
   async (userId: string): Promise<Set<PermissionKey>> => {
     const db = getDb();
@@ -96,6 +90,18 @@ export async function setResourceAccess(
   }
 }
 
+export interface ResourceAccess {
+  canRead: boolean;
+  canWrite: boolean;
+  canDelete: boolean;
+}
+
+/**
+ * The single source of truth for "what can this viewer actually do with
+ * this resource" — used for disabling forms at read-only access, hiding
+ * delete without delete access, and gating pages while keeping the
+ * shell intact (Section 9.5.9).
+ */
 export async function getResourceAccess(
   user: SessionUser,
   resourceKey: string,
@@ -117,6 +123,10 @@ export async function getResourceAccess(
   };
 }
 
+/**
+ * Every resource's level at once, for the sidebar/Quick Actions — one
+ * query instead of one per resource.
+ */
 export async function getUserAccessLevels(
   user: SessionUser,
 ): Promise<Record<string, AccessLevel | "none">> {
