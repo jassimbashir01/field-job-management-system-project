@@ -5,6 +5,7 @@ export interface QuickActionConfig {
 }
 
 export const QUICK_ACTIONS: QuickActionConfig[] = [
+  { label: "Create Job", href: "/jobs/new", resourceKey: "jobs" },
   {
     label: "Create Customer",
     href: "/customers/new",

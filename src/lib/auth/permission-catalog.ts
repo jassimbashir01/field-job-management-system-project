@@ -10,6 +10,7 @@ export const RESOURCES: ResourceConfig[] = [
   { key: "customers", label: "Customers", maxLevel: "delete" },
   { key: "sites", label: "Sites", maxLevel: "delete" },
   { key: "equipment", label: "Equipment", maxLevel: "delete" },
+  { key: "jobs", label: "Jobs", maxLevel: "delete" },
   { key: "team", label: "Team (view + reset passwords)", maxLevel: "write" },
 ];
 
@@ -47,6 +48,9 @@ export const PERMISSIONS = {
   EQUIPMENT_READ: permissionKey("equipment", "read"),
   EQUIPMENT_WRITE: permissionKey("equipment", "write"),
   EQUIPMENT_DELETE: permissionKey("equipment", "delete"),
+  JOBS_READ: permissionKey("jobs", "read"),
+  JOBS_WRITE: permissionKey("jobs", "write"),
+  JOBS_DELETE: permissionKey("jobs", "delete"),
   TEAM_READ: permissionKey("team", "read"),
   TEAM_WRITE: permissionKey("team", "write"),
 } as const;
