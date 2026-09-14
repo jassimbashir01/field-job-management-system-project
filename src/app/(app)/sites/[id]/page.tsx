@@ -74,7 +74,13 @@ export default async function SiteDetailPage({
           <Button
             variant="outline"
             size="sm"
-            render={<Link href={`/jobs/new?siteId=${site.id}`}>New job</Link>}
+            render={
+              <Link
+                href={`/jobs/new?customerId=${site.customerId}&siteId=${site.id}`}
+              >
+                New job
+              </Link>
+            }
             nativeButton={false}
           />
         </div>

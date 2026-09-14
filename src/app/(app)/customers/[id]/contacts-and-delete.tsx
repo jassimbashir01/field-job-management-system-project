@@ -37,10 +37,18 @@ export function ContactsSection({
     Boolean(state.success || state.error),
   );
   const [, startRemoveTransition] = useTransition();
+  const [showForm, setShowForm] = useState(false);
 
   return (
     <div className="space-y-4">
-      <h2 className="text-sm font-semibold">Contacts</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Contacts</h2>
+        {canWrite && !showForm && (
+          <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
+            Add contact
+          </Button>
+        )}
+      </div>
 
       {contacts.length > 0 && (
         <div className="divide-y rounded-md border">
@@ -75,8 +83,14 @@ export function ContactsSection({
         </div>
       )}
 
-      {canWrite && (
-        <form action={formAction} className="space-y-2 rounded-md border p-4">
+      {canWrite && showForm && (
+        <form
+          action={(formData) => {
+            formAction(formData);
+            setShowForm(false);
+          }}
+          className="space-y-2 rounded-md border p-4"
+        >
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label htmlFor="contact-name" className="sr-only">
@@ -120,9 +134,18 @@ export function ContactsSection({
               {state.error.message}
             </p>
           )}
-          <Button type="submit" variant="outline" disabled={isPending}>
-            {isPending ? "Adding…" : "Add contact"}
-          </Button>
+          <div className="flex gap-2">
+            <Button type="submit" variant="outline" disabled={isPending}>
+              {isPending ? "Adding…" : "Add contact"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setShowForm(false)}
+            >
+              Cancel
+            </Button>
+          </div>
         </form>
       )}
     </div>

@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import * as z from "zod";
 import { getDb } from "@/db";
-import { customFieldValues, sites } from "@/db/schema";
+import { customFieldValues, jobs, sites } from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/auth/permission-catalog";
 import {
@@ -181,6 +181,19 @@ export async function deleteSiteAction(siteId: string): Promise<FormState> {
     await requirePermission(PERMISSIONS.SITES_DELETE);
 
     const db = getDb();
+    const [jobCountRow] = await db
+      .select({ value: count() })
+      .from(jobs)
+      .where(eq(jobs.siteId, siteId));
+    const jobCount = Number(jobCountRow?.value ?? 0);
+
+    if (jobCount > 0) {
+      throw new ConflictError(
+        `Can't delete this site — ${jobCount} job${jobCount === 1 ? "" : "s"} ` +
+          `still reference${jobCount === 1 ? "s" : ""} it. Delete or reassign those jobs first.`,
+      );
+    }
+
     await db.transaction(async (tx) => {
       await tx
         .delete(customFieldValues)

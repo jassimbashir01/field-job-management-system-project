@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import * as z from "zod";
 import { getDb } from "@/db";
-import { customFieldValues, jobs } from "@/db/schema";
+import { customers, customFieldValues, jobs, sites } from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/auth/permission-catalog";
 import {
@@ -18,13 +18,16 @@ import {
   JOB_STATUS_LABELS,
   type JobStatus,
 } from "@/lib/job-status";
-import { ConflictError, toSafeError, type SafeError } from "@/lib/errors";
+import {
+  ConflictError,
+  toSafeError,
+  ValidationError,
+  type SafeError,
+} from "@/lib/errors";
 
 const jobSchema = z.object({
-  customerId: z.uuid(),
-  siteId: z.union([z.uuid(), z.literal("")]).optional(),
-  assignedToUserId: z.union([z.uuid(), z.literal("")]).optional(),
   title: z.string().min(1, "Title is required"),
+  assignedToUserId: z.union([z.uuid(), z.literal("")]).optional(),
   jobType: z.string().optional(),
   description: z.string().optional(),
   reference: z.string().optional(),
@@ -102,32 +105,37 @@ export async function createJobAction(
     }
 
     const db = getDb();
-    const [created] = await db
-      .insert(jobs)
-      .values({
-        customerId: parsed.data.customerId,
-        siteId: parsed.data.siteId || null,
-        assignedToUserId: parsed.data.assignedToUserId || null,
-        title: parsed.data.title,
-        jobType: parsed.data.jobType || null,
-        description: parsed.data.description || null,
-        reference: parsed.data.reference || null,
-        scheduledDate: parsed.data.scheduledDate || null,
-        scheduledTime: parsed.data.scheduledTime || null,
-        notes: parsed.data.notes || null,
-      })
-      .returning();
+    newJobId = await db.transaction(async (tx) => {
+      const customerId = await resolveCustomerId(tx, formData);
+      const siteId = await resolveSiteId(tx, formData, customerId);
 
-    if (!created) {
-      throw new ConflictError("Insert did not return the created job row");
-    }
-    newJobId = created.id;
+      const [created] = await tx
+        .insert(jobs)
+        .values({
+          customerId,
+          siteId,
+          assignedToUserId: parsed.data.assignedToUserId || null,
+          title: parsed.data.title,
+          jobType: parsed.data.jobType || null,
+          description: parsed.data.description || null,
+          reference: parsed.data.reference || null,
+          scheduledDate: parsed.data.scheduledDate || null,
+          scheduledTime: parsed.data.scheduledTime || null,
+          notes: parsed.data.notes || null,
+        })
+        .returning();
 
-    const definitions = await getFieldDefinitions("job");
-    if (definitions.length > 0) {
-      const values = extractCustomFieldValues(formData, definitions);
-      await setFieldValues(newJobId, values);
-    }
+      if (!created)
+        throw new ConflictError("Insert did not return the created job row");
+
+      const definitions = await getFieldDefinitions("job");
+      if (definitions.length > 0) {
+        const values = extractCustomFieldValues(formData, definitions);
+        await setFieldValues(created.id, values);
+      }
+
+      return created.id;
+    });
   } catch (error) {
     return { success: false, error: toSafeError(error) };
   }
@@ -155,28 +163,33 @@ export async function updateJobAction(
     }
 
     const db = getDb();
-    await db
-      .update(jobs)
-      .set({
-        customerId: parsed.data.customerId,
-        siteId: parsed.data.siteId || null,
-        assignedToUserId: parsed.data.assignedToUserId || null,
-        title: parsed.data.title,
-        jobType: parsed.data.jobType || null,
-        description: parsed.data.description || null,
-        reference: parsed.data.reference || null,
-        scheduledDate: parsed.data.scheduledDate || null,
-        scheduledTime: parsed.data.scheduledTime || null,
-        notes: parsed.data.notes || null,
-        updatedAt: new Date(),
-      })
-      .where(eq(jobs.id, jobId));
+    await db.transaction(async (tx) => {
+      const customerId = await resolveCustomerId(tx, formData);
+      const siteId = await resolveSiteId(tx, formData, customerId);
 
-    const definitions = await getFieldDefinitions("job");
-    if (definitions.length > 0) {
-      const values = extractCustomFieldValues(formData, definitions);
-      await setFieldValues(jobId, values);
-    }
+      await tx
+        .update(jobs)
+        .set({
+          customerId,
+          siteId,
+          assignedToUserId: parsed.data.assignedToUserId || null,
+          title: parsed.data.title,
+          jobType: parsed.data.jobType || null,
+          description: parsed.data.description || null,
+          reference: parsed.data.reference || null,
+          scheduledDate: parsed.data.scheduledDate || null,
+          scheduledTime: parsed.data.scheduledTime || null,
+          notes: parsed.data.notes || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(jobs.id, jobId));
+
+      const definitions = await getFieldDefinitions("job");
+      if (definitions.length > 0) {
+        const values = extractCustomFieldValues(formData, definitions);
+        await setFieldValues(jobId, values);
+      }
+    });
 
     revalidatePath(`/jobs/${jobId}`);
     return { success: true, error: null };
@@ -239,4 +252,54 @@ export async function deleteJobAction(jobId: string): Promise<FormState> {
   }
 
   redirect("/jobs");
+}
+
+export async function resolveCustomerId(
+  tx: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0],
+  formData: FormData,
+): Promise<string> {
+  const newName = formData.get("newCustomerName");
+  if (newName && String(newName).trim()) {
+    const [created] = await tx
+      .insert(customers)
+      .values({
+        name: String(newName).trim(),
+        phone: (formData.get("newCustomerPhone") as string) || null,
+        email: (formData.get("newCustomerEmail") as string) || null,
+      })
+      .returning();
+    if (!created) throw new ConflictError("Could not create the new customer.");
+    return created.id;
+  }
+
+  const existingId = formData.get("customerId");
+  if (typeof existingId !== "string" || !existingId) {
+    throw new ValidationError("A customer is required.");
+  }
+  return existingId;
+}
+
+export async function resolveSiteId(
+  tx: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0],
+  formData: FormData,
+  customerId: string,
+): Promise<string | null> {
+  const newName = formData.get("newSiteName");
+  if (newName && String(newName).trim()) {
+    const [created] = await tx
+      .insert(sites)
+      .values({
+        customerId,
+        name: String(newName).trim(),
+        addressLine1: (formData.get("newSiteAddressLine1") as string) || null,
+        city: (formData.get("newSiteCity") as string) || null,
+        postalCode: (formData.get("newSitePostalCode") as string) || null,
+      })
+      .returning();
+    if (!created) throw new ConflictError("Could not create the new site.");
+    return created.id;
+  }
+
+  const existingId = formData.get("siteId");
+  return typeof existingId === "string" && existingId ? existingId : null;
 }

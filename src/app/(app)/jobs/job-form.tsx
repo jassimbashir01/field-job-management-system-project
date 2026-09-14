@@ -16,6 +16,7 @@ import type {
 } from "@/db/schema";
 import type { CustomFieldValue } from "@/lib/custom-fields";
 import { createJobAction, updateJobAction, type FormState } from "./actions";
+import { CustomerAndSitePickers } from "./customer-site-pickers";
 
 const initialState: FormState = { success: false, error: null };
 
@@ -123,45 +124,13 @@ function JobFields({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="customerId">Customer</Label>
-          <select
-            id="customerId"
-            name="customerId"
-            defaultValue={job?.customerId ?? defaultCustomerId ?? ""}
-            disabled={readOnly}
-            className="w-full rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
-            required
-          >
-            <option value="" disabled>
-              Select a customer…
-            </option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="siteId">Site</Label>
-          <select
-            id="siteId"
-            name="siteId"
-            defaultValue={job?.siteId ?? defaultSiteId ?? ""}
-            disabled={readOnly}
-            className="w-full rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
-          >
-            <option value="">No site yet</option>
-            {sites.map((site) => (
-              <option key={site.id} value={site.id}>
-                {site.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      <CustomerAndSitePickers
+        customers={customers}
+        sites={sites}
+        defaultCustomerId={job?.customerId ?? defaultCustomerId}
+        defaultSiteId={job?.siteId ?? defaultSiteId}
+        disabled={readOnly}
+      />
 
       <div className="space-y-2">
         <Label htmlFor="assignedToUserId">Assigned to</Label>

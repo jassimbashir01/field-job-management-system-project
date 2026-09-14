@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { eq, inArray } from "drizzle-orm";
+import { count, eq, inArray } from "drizzle-orm";
 import * as z from "zod";
 import { getDb } from "@/db";
 import {
   customFieldValues,
   customerContacts,
   customers,
+  jobs,
   sites,
 } from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
@@ -181,6 +182,19 @@ export async function deleteCustomerAction(
     await requirePermission(PERMISSIONS.CUSTOMERS_DELETE);
 
     const db = getDb();
+    const [jobCountRow] = await db
+      .select({ value: count() })
+      .from(jobs)
+      .where(eq(jobs.customerId, customerId));
+    const jobCount = Number(jobCountRow?.value ?? 0);
+
+    if (jobCount > 0) {
+      throw new ConflictError(
+        `Can't delete this customer — ${jobCount} job${jobCount === 1 ? "" : "s"} ` +
+          `still reference${jobCount === 1 ? "s" : ""} them. Delete or reassign those jobs first.`,
+      );
+    }
+
     await db.transaction(async (tx) => {
       const customerSites = await tx
         .select({ id: sites.id })

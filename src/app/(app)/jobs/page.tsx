@@ -5,11 +5,12 @@ import { getDb } from "@/db";
 import { customers, jobs, sites, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
-import { JOB_STATUS_LABELS, type JobStatus } from "@/lib/job-status";
 import { Button } from "@/components/ui/button";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
-import { JobStatusBadge } from "@/components/shared/job-status-badge";
 import { JobSearchInput } from "./search-input";
+import { JobStatusQuickSelect } from "./status-quick-select";
+import { type JobStatus } from "@/lib/job-status";
+import { JobStatusFilter } from "./status-filter";
 
 export default async function JobsPage({
   searchParams,
@@ -76,18 +77,7 @@ export default async function JobsPage({
 
       <form method="get" className="mt-4 flex gap-2">
         <JobSearchInput defaultQuery={query ?? ""} />
-        <select
-          name="status"
-          defaultValue={status ?? ""}
-          className="rounded-md border border-input px-3 py-2 text-sm"
-        >
-          <option value="">All statuses</option>
-          {Object.entries(JOB_STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <JobStatusFilter currentStatus={status ?? ""} />
       </form>
 
       <div className="mt-6 divide-y rounded-md border">
@@ -97,12 +87,11 @@ export default async function JobsPage({
           </p>
         )}
         {rows.map((job) => (
-          <Link
+          <div
             key={job.id}
-            href={`/jobs/${job.id}`}
             className="flex items-center justify-between px-4 py-3 text-sm hover:bg-accent"
           >
-            <div>
+            <Link href={`/jobs/${job.id}`} className="flex-1">
               <p className="font-medium">
                 #{job.jobNumber} — {job.title}
               </p>
@@ -112,9 +101,13 @@ export default async function JobsPage({
                 {job.technicianName && ` · ${job.technicianName}`}
                 {job.scheduledDate && ` · ${job.scheduledDate}`}
               </p>
-            </div>
-            <JobStatusBadge status={job.status} />
-          </Link>
+            </Link>
+            <JobStatusQuickSelect
+              jobId={job.id}
+              status={job.status}
+              disabled={!access.canWrite}
+            />
+          </div>
         ))}
       </div>
     </div>
