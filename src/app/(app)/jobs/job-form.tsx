@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import type {
 import type { CustomFieldValue } from "@/lib/custom-fields";
 import { createJobAction, updateJobAction, type FormState } from "./actions";
 import { CustomerAndSitePickers } from "./customer-site-pickers";
+import { useRouter } from "next/navigation";
 
 const initialState: FormState = { success: false, error: null };
 
@@ -47,12 +48,19 @@ export function JobForm({
   customFieldValues?: Map<string, CustomFieldValue>;
   readOnly?: boolean;
 }) {
+  const router = useRouter();
   const action = job ? updateJobAction.bind(null, job.id) : createJobAction;
   const [state, formAction, isPending] = useActionState(action, initialState);
   const showMessage = useAutoDismiss(
     state,
     Boolean(state.success || state.error),
   );
+
+  useEffect(() => {
+    if (state.success) {
+      router.refresh();
+    }
+  }, [state.success, router]);
 
   return (
     <form action={formAction} className="mt-6 space-y-4">

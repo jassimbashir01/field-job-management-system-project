@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Briefcase,
+  CalendarDays,
   LayoutDashboard,
   MapPin,
   Settings,
@@ -20,6 +21,12 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Jobs", href: "/jobs", icon: Briefcase, resourceKey: "jobs" },
+  {
+    label: "Schedule",
+    href: "/schedule",
+    icon: CalendarDays,
+    resourceKey: "jobs",
+  },
   {
     label: "Customers",
     href: "/customers",
