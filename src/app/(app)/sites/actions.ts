@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { count, eq } from "drizzle-orm";
+import { count, eq, inArray } from "drizzle-orm";
 import * as z from "zod";
 import { getDb } from "@/db";
-import { customFieldValues, jobs, sites } from "@/db/schema";
+import { customFieldValues, equipment, jobs, sites } from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/auth/permission-catalog";
 import {
@@ -195,9 +195,16 @@ export async function deleteSiteAction(siteId: string): Promise<FormState> {
     }
 
     await db.transaction(async (tx) => {
+      const siteEquipment = await tx
+        .select({ id: equipment.id })
+        .from(equipment)
+        .where(eq(equipment.siteId, siteId));
+
+      const entityIdsToClean = [siteId, ...siteEquipment.map((e) => e.id)];
+
       await tx
         .delete(customFieldValues)
-        .where(eq(customFieldValues.entityId, siteId));
+        .where(inArray(customFieldValues.entityId, entityIdsToClean));
       await tx.delete(sites).where(eq(sites.id, siteId));
     });
 

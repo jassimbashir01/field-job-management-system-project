@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { JobStatusBadge } from "@/components/shared/job-status-badge";
 import type { JobStatus } from "@/lib/job-status";
+import { isDateTimeInPast, todayDateString } from "@/lib/week";
 import { reassignJobAction } from "./actions";
 
 interface WeekJob {
@@ -13,9 +14,11 @@ interface WeekJob {
   title: string;
   status: JobStatus;
   scheduledDate: string | null;
+  scheduledTime: string | null;
   assignedToUserId: string | null;
   customerName: string;
   siteName: string | null;
+  oneOffLocation: string | null;
 }
 
 interface Technician {
@@ -26,19 +29,20 @@ interface Technician {
 export function ScheduleJobCard({
   job,
   technicians,
-  weekDates,
   disabled,
 }: {
   job: WeekJob;
   technicians: Technician[];
-  weekDates: string[];
   disabled?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [assignedTo, setAssignedTo] = useState(job.assignedToUserId ?? "");
-  const [date, setDate] = useState(job.scheduledDate ?? weekDates[0] ?? "");
+  const [date, setDate] = useState(job.scheduledDate ?? todayDateString());
+  const [time, setTime] = useState(job.scheduledTime ?? "");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  const location = job.siteName ?? job.oneOffLocation;
 
   if (!editing) {
     return (
@@ -49,7 +53,7 @@ export function ScheduleJobCard({
           </p>
           <p className="text-muted-foreground">
             {job.customerName}
-            {job.siteName && ` · ${job.siteName}`}
+            {location && ` · ${location}`}
           </p>
         </Link>
         <div className="flex items-center justify-between">
@@ -82,17 +86,19 @@ export function ScheduleJobCard({
           </option>
         ))}
       </select>
-      <select
+      <input
+        type="date"
         value={date}
+        min={todayDateString()}
         onChange={(e) => setDate(e.target.value)}
         className="w-full rounded border px-1 py-1 text-xs"
-      >
-        {weekDates.map((weekDate) => (
-          <option key={weekDate} value={weekDate}>
-            {weekDate}
-          </option>
-        ))}
-      </select>
+      />
+      <input
+        type="time"
+        value={time}
+        onChange={(e) => setTime(e.target.value)}
+        className="w-full rounded border px-1 py-1 text-xs"
+      />
       {error && <p className="text-destructive">{error}</p>}
       <div className="flex gap-1">
         <Button
@@ -101,10 +107,15 @@ export function ScheduleJobCard({
           onClick={() =>
             startTransition(async () => {
               setError(null);
+              if (isDateTimeInPast(date, time)) {
+                setError("Can't schedule a job in the past.");
+                return;
+              }
               const result = await reassignJobAction(
                 job.id,
                 assignedTo || null,
                 date || null,
+                time || null,
               );
               if (result.success) {
                 setEditing(false);

@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { SiteSearchInput } from "./search-input";
 
+export const dynamic = "force-dynamic";
+
 export default async function SitesPage({
   searchParams,
 }: {

@@ -13,6 +13,8 @@ const TABS: { entityType: EntityType; label: string }[] = [
   { entityType: "equipment", label: "Equipment" },
 ];
 
+export const dynamic = "force-dynamic";
+
 export default async function CustomFieldsSettingsPage({
   searchParams,
 }: {

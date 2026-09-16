@@ -34,6 +34,7 @@ export const jobs = pgTable("jobs", {
     .notNull()
     .references(() => customers.id, { onDelete: "restrict" }),
   siteId: uuid().references(() => sites.id, { onDelete: "restrict" }),
+  oneOffLocation: text(),
   assignedToUserId: uuid().references(() => users.id, { onDelete: "set null" }),
   status: jobStatusEnum().notNull().default("draft"),
   title: text().notNull(),

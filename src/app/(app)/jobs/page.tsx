@@ -1,6 +1,5 @@
 import Link from "next/link";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { and, asc, desc, eq, ilike, or } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { getDb } from "@/db";
 import { customers, jobs, sites, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
@@ -11,6 +10,8 @@ import { JobSearchInput } from "./search-input";
 import { JobStatusQuickSelect } from "./status-quick-select";
 import { type JobStatus } from "@/lib/job-status";
 import { JobStatusFilter } from "./status-filter";
+
+export const dynamic = "force-dynamic";
 
 export default async function JobsPage({
   searchParams,
@@ -39,6 +40,7 @@ export default async function JobsPage({
       customerName: customers.name,
       siteName: sites.name,
       technicianName: users.displayName,
+      oneOffLocation: jobs.oneOffLocation,
     })
     .from(jobs)
     .innerJoin(customers, eq(jobs.customerId, customers.id))
@@ -97,7 +99,8 @@ export default async function JobsPage({
               </p>
               <p className="text-xs text-muted-foreground">
                 {job.customerName}
-                {job.siteName && ` · ${job.siteName}`}
+                {(job.siteName ?? job.oneOffLocation) &&
+                  ` · ${job.siteName ?? job.oneOffLocation}`}
                 {job.technicianName && ` · ${job.technicianName}`}
                 {job.scheduledDate && ` · ${job.scheduledDate}`}
               </p>

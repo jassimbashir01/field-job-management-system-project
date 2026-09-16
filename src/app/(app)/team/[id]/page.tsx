@@ -12,6 +12,8 @@ import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { EditUserForm } from "./edit-user-form";
 import { PasswordResetSection } from "./password-reset-section";
 
+export const dynamic = "force-dynamic";
+
 export default async function EditTeamMemberPage({
   params,
 }: {

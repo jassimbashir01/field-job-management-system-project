@@ -11,6 +11,8 @@ import { JobForm } from "../job-form";
 import { JobDeleteSection } from "./delete-section";
 import { StatusTransitions } from "./status-transitions";
 
+export const dynamic = "force-dynamic";
+
 export default async function JobDetailPage({
   params,
 }: {

@@ -7,6 +7,8 @@ import { hasPermission, PERMISSIONS } from "@/lib/auth/permissions";
 import { Button } from "@/components/ui/button";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 
+export const dynamic = "force-dynamic";
+
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
   manager: "Manager",

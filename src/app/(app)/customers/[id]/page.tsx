@@ -12,6 +12,8 @@ import { JobStatusBadge } from "@/components/shared/job-status-badge";
 import { CustomerForm } from "../customer-form";
 import { ContactsSection, CustomerDeleteSection } from "./contacts-and-delete";
 
+export const dynamic = "force-dynamic";
+
 export default async function CustomerDetailPage({
   params,
 }: {

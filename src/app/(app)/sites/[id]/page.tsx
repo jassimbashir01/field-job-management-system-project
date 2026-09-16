@@ -12,6 +12,8 @@ import { JobStatusBadge } from "@/components/shared/job-status-badge";
 import { SiteForm } from "../site-form";
 import { SiteDeleteSection } from "./delete-section";
 
+export const dynamic = "force-dynamic";
+
 export default async function SiteDetailPage({
   params,
 }: {

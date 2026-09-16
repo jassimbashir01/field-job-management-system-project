@@ -10,6 +10,17 @@ function parseDateString(dateString: string): {
   return { year, month, day };
 }
 
+export function isDateTimeInPast(
+  dateStr: string | null,
+  timeStr: string | null,
+): boolean {
+  if (!dateStr) return false;
+  if (timeStr) {
+    return new Date(`${dateStr}T${timeStr}`) < new Date();
+  }
+  return dateStr < todayDateString();
+}
+
 export function getWeekDates(anchorDateString: string): string[] {
   const { year, month, day } = parseDateString(anchorDateString);
   const anchor = new Date(year, month - 1, day);

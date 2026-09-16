@@ -43,6 +43,13 @@
       "when": 1789294167334,
       "tag": "0005_zippy_cerebro",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789553804844,
+      "tag": "0006_flashy_celestials",
+      "breakpoints": true
     }
   ]
 }

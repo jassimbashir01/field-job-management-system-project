@@ -24,6 +24,7 @@ import {
   ValidationError,
   type SafeError,
 } from "@/lib/errors";
+import { isDateTimeInPast } from "@/lib/week";
 
 const jobSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -34,6 +35,7 @@ const jobSchema = z.object({
   scheduledDate: z.string().optional(),
   scheduledTime: z.string().optional(),
   notes: z.string().optional(),
+  oneOffLocation: z.string().optional(),
 });
 
 export interface FormState {
@@ -104,6 +106,21 @@ export async function createJobAction(
       };
     }
 
+    if (
+      isDateTimeInPast(
+        parsed.data.scheduledDate ?? null,
+        parsed.data.scheduledTime ?? null,
+      )
+    ) {
+      return {
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Can't schedule a job in the past.",
+        },
+      };
+    }
+
     const db = getDb();
     newJobId = await db.transaction(async (tx) => {
       const customerId = await resolveCustomerId(tx, formData);
@@ -114,6 +131,7 @@ export async function createJobAction(
         .values({
           customerId,
           siteId,
+          oneOffLocation: siteId ? null : parsed.data.oneOffLocation || null,
           assignedToUserId: parsed.data.assignedToUserId || null,
           title: parsed.data.title,
           jobType: parsed.data.jobType || null,
@@ -162,6 +180,21 @@ export async function updateJobAction(
       };
     }
 
+    if (
+      isDateTimeInPast(
+        parsed.data.scheduledDate ?? null,
+        parsed.data.scheduledTime ?? null,
+      )
+    ) {
+      return {
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Can't schedule a job in the past.",
+        },
+      };
+    }
+
     const db = getDb();
     await db.transaction(async (tx) => {
       const customerId = await resolveCustomerId(tx, formData);
@@ -172,6 +205,7 @@ export async function updateJobAction(
         .set({
           customerId,
           siteId,
+          oneOffLocation: siteId ? null : parsed.data.oneOffLocation || null,
           assignedToUserId: parsed.data.assignedToUserId || null,
           title: parsed.data.title,
           jobType: parsed.data.jobType || null,
@@ -192,6 +226,8 @@ export async function updateJobAction(
     });
 
     revalidatePath(`/jobs/${jobId}`);
+    revalidatePath("/jobs");
+    revalidatePath("/schedule");
     return { success: true, error: null };
   } catch (error) {
     return { success: false, error: toSafeError(error) };
@@ -228,6 +264,7 @@ export async function transitionJobStatusAction(
       .where(eq(jobs.id, jobId));
 
     revalidatePath(`/jobs/${jobId}`);
+    revalidatePath("/jobs");
     return { success: true, error: null };
   } catch (error) {
     return { success: false, error: toSafeError(error) };

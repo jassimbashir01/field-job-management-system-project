@@ -1,8 +1,12 @@
-import { requireRoleOrRedirect } from "@/lib/auth/guards";
+import { requireUser } from "@/lib/auth/guards";
+import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { NewUserForm } from "./new-user-form";
 
 export default async function NewTeamMemberPage() {
-  await requireRoleOrRedirect("admin");
+  const viewer = await requireUser();
+  if (viewer.role !== "admin") {
+    return <ForbiddenMessage />;
+  }
 
   return (
     <div className="max-w-lg">

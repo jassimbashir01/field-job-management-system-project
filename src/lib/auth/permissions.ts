@@ -13,7 +13,7 @@ import {
   type PermissionKey,
 } from "./permission-catalog";
 
-export { PERMISSIONS, type PermissionKey, AccessLevel };
+export { PERMISSIONS, type PermissionKey, type AccessLevel };
 
 export const getUserPermissions = cache(
   async (userId: string): Promise<Set<PermissionKey>> => {

@@ -9,6 +9,8 @@ import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { EquipmentForm } from "../equipment-form";
 import { EquipmentDeleteSection } from "./delete-section";
 
+export const dynamic = "force-dynamic";
+
 export default async function EquipmentDetailPage({
   params,
 }: {

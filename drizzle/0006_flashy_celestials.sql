@@ -1,0 +1,1 @@
+ALTER TABLE "jobs" ADD COLUMN "one_off_location" text;

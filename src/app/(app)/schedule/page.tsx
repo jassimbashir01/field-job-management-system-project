@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { ScheduleJobCard } from "./job-card";
 
+export const dynamic = "force-dynamic";
+
 export default async function SchedulePage({
   searchParams,
 }: {
@@ -46,9 +48,11 @@ export default async function SchedulePage({
         title: jobs.title,
         status: jobs.status,
         scheduledDate: jobs.scheduledDate,
+        scheduledTime: jobs.scheduledTime,
         assignedToUserId: jobs.assignedToUserId,
         customerName: customers.name,
         siteName: sites.name,
+        oneOffLocation: jobs.oneOffLocation,
       })
       .from(jobs)
       .innerJoin(customers, eq(jobs.customerId, customers.id))
@@ -135,7 +139,6 @@ export default async function SchedulePage({
                           key={job.id}
                           job={job}
                           technicians={technicians}
-                          weekDates={weekDates}
                           disabled={!access.canWrite}
                         />
                       ))}
@@ -164,7 +167,6 @@ export default async function SchedulePage({
                           key={job.id}
                           job={job}
                           technicians={technicians}
-                          weekDates={weekDates}
                           disabled={!access.canWrite}
                         />
                       ))}

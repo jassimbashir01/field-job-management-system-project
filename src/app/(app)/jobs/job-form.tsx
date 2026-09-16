@@ -17,7 +17,6 @@ import type {
 import type { CustomFieldValue } from "@/lib/custom-fields";
 import { createJobAction, updateJobAction, type FormState } from "./actions";
 import { CustomerAndSitePickers } from "./customer-site-pickers";
-import { useRouter } from "next/navigation";
 
 const initialState: FormState = { success: false, error: null };
 
@@ -48,7 +47,6 @@ export function JobForm({
   customFieldValues?: Map<string, CustomFieldValue>;
   readOnly?: boolean;
 }) {
-  const router = useRouter();
   const action = job ? updateJobAction.bind(null, job.id) : createJobAction;
   const [state, formAction, isPending] = useActionState(action, initialState);
   const showMessage = useAutoDismiss(
@@ -58,9 +56,9 @@ export function JobForm({
 
   useEffect(() => {
     if (state.success) {
-      router.refresh();
+      window.location.reload();
     }
-  }, [state.success, router]);
+  }, [state.success]);
 
   return (
     <form action={formAction} className="mt-6 space-y-4">
@@ -137,6 +135,7 @@ function JobFields({
         sites={sites}
         defaultCustomerId={job?.customerId ?? defaultCustomerId}
         defaultSiteId={job?.siteId ?? defaultSiteId}
+        defaultOneOffLocation={job?.oneOffLocation}
         disabled={readOnly}
       />
 

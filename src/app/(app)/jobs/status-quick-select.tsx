@@ -51,7 +51,11 @@ export function JobStatusQuickSelect({
             }
           });
         }}
-        className="rounded-md border border-input px-2 py-1 text-xs"
+        className="rounded-full border px-2 py-0.5 text-xs font-medium disabled:opacity-50"
+        style={{
+          color: `var(--status-${current.replace(/_/g, "-")})`,
+          borderColor: `var(--status-${current.replace(/_/g, "-")})`,
+        }}
       >
         {options.map((option) => (
           <option key={option} value={option}>

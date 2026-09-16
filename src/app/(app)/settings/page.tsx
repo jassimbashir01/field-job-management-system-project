@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { SettingsForm } from "./settings-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function SettingsPage() {
   const viewer = await requireUser();
   if (viewer.role !== "admin") {
