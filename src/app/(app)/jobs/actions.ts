@@ -5,15 +5,22 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import * as z from "zod";
 import { getDb } from "@/db";
-import { customers, customFieldValues, jobs, sites } from "@/db/schema";
+import {
+  customers,
+  customFieldValues,
+  jobChecklistItems,
+  jobs,
+  sites,
+} from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/auth/permission-catalog";
 import { logActivity } from "@/lib/activity-log";
 import {
+  extractCustomFieldValues,
   getFieldDefinitions,
   setFieldValues,
-  type CustomFieldValue,
 } from "@/lib/custom-fields";
+import { parseChecklistItems } from "@/lib/job-templates";
 import {
   canTransition,
   JOB_STATUS_LABELS,
@@ -42,49 +49,6 @@ const jobSchema = z.object({
 export interface FormState {
   success: boolean;
   error: SafeError | null;
-}
-
-function extractCustomFieldValues(
-  formData: FormData,
-  definitions: { id: string; fieldType: string }[],
-): Map<string, CustomFieldValue> {
-  const values = new Map<string, CustomFieldValue>();
-
-  for (const definition of definitions) {
-    const name = `custom_${definition.id}`;
-
-    switch (definition.fieldType) {
-      case "boolean":
-        values.set(definition.id, formData.get(name) === "on");
-        break;
-      case "multi_select":
-        values.set(definition.id, formData.getAll(name).map(String));
-        break;
-      case "number":
-      case "decimal": {
-        const raw = formData.get(name);
-        values.set(definition.id, raw ? Number(raw) : null);
-        break;
-      }
-      case "measurement": {
-        const rawValue = formData.get(`${name}_value`);
-        const unit = formData.get(`${name}_unit`);
-        values.set(
-          definition.id,
-          rawValue
-            ? { value: Number(rawValue), unit: String(unit ?? "") }
-            : null,
-        );
-        break;
-      }
-      default: {
-        const raw = formData.get(name);
-        values.set(definition.id, raw ? String(raw) : null);
-      }
-    }
-  }
-
-  return values;
 }
 
 export async function createJobAction(
@@ -150,7 +114,21 @@ export async function createJobAction(
       const definitions = await getFieldDefinitions("job");
       if (definitions.length > 0) {
         const values = extractCustomFieldValues(formData, definitions);
-        await setFieldValues(created.id, values);
+        await setFieldValues(created.id, values, tx);
+      }
+
+      const checklistItems = parseChecklistItems(
+        formData.get("templateChecklistItems") as string | null,
+      );
+
+      if (checklistItems.length > 0) {
+        await tx.insert(jobChecklistItems).values(
+          checklistItems.map((label, index) => ({
+            jobId: created.id,
+            label,
+            sortOrder: index,
+          })),
+        );
       }
 
       await logActivity({
@@ -231,7 +209,7 @@ export async function updateJobAction(
       const definitions = await getFieldDefinitions("job");
       if (definitions.length > 0) {
         const values = extractCustomFieldValues(formData, definitions);
-        await setFieldValues(jobId, values);
+        await setFieldValues(jobId, values, tx);
       }
 
       await logActivity({
@@ -376,4 +354,25 @@ export async function resolveSiteId(
 
   const existingId = formData.get("siteId");
   return typeof existingId === "string" && existingId ? existingId : null;
+}
+
+export async function toggleChecklistItemAction(
+  itemId: string,
+  jobId: string,
+  completed: boolean,
+): Promise<FormState> {
+  try {
+    await requirePermission(PERMISSIONS.JOBS_WRITE);
+
+    const db = getDb();
+    await db
+      .update(jobChecklistItems)
+      .set({ completed })
+      .where(eq(jobChecklistItems.id, itemId));
+
+    revalidatePath(`/jobs/${jobId}`);
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: toSafeError(error) };
+  }
 }

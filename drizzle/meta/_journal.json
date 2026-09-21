@@ -57,6 +57,13 @@
       "when": 1789988039012,
       "tag": "0007_plain_piledriver",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789993493505,
+      "tag": "0008_perpetual_grey_gargoyle",
+      "breakpoints": true
     }
   ]
 }

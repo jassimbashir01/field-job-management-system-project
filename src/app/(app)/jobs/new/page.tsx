@@ -6,6 +6,7 @@ import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions } from "@/lib/custom-fields";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { JobForm } from "../job-form";
+import { getJobTemplatesWithDetails } from "@/lib/job-templates";
 
 export default async function NewJobPage({
   searchParams,
@@ -21,16 +22,18 @@ export default async function NewJobPage({
   const { customerId, siteId } = await searchParams;
 
   const db = getDb();
-  const [allCustomers, allSites, technicians, definitions] = await Promise.all([
-    db.select().from(customers).orderBy(asc(customers.name)),
-    db.select().from(sites).orderBy(asc(sites.name)),
-    db
-      .select()
-      .from(users)
-      .where(eq(users.role, "team_member"))
-      .orderBy(asc(users.displayName)),
-    getFieldDefinitions("job"),
-  ]);
+  const [allCustomers, allSites, technicians, definitions, templates] =
+    await Promise.all([
+      db.select().from(customers).orderBy(asc(customers.name)),
+      db.select().from(sites).orderBy(asc(sites.name)),
+      db
+        .select()
+        .from(users)
+        .where(eq(users.role, "team_member"))
+        .orderBy(asc(users.displayName)),
+      getFieldDefinitions("job"),
+      getJobTemplatesWithDetails(),
+    ]);
 
   return (
     <div className="max-w-lg">
@@ -42,6 +45,7 @@ export default async function NewJobPage({
         defaultCustomerId={customerId}
         defaultSiteId={siteId}
         definitions={definitions}
+        templates={templates}
       />
     </div>
   );

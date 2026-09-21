@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import type {
   users,
 } from "@/db/schema";
 import type { CustomFieldValue } from "@/lib/custom-fields";
+import type { JobTemplateWithDetails } from "@/lib/job-templates";
 import { createJobAction, updateJobAction, type FormState } from "./actions";
 import { CustomerAndSitePickers } from "./customer-site-pickers";
 
@@ -35,6 +36,7 @@ export function JobForm({
   defaultSiteId,
   definitions,
   customFieldValues,
+  templates,
   readOnly = false,
 }: {
   job?: Job;
@@ -45,6 +47,7 @@ export function JobForm({
   defaultSiteId?: string;
   definitions: Definition[];
   customFieldValues?: Map<string, CustomFieldValue>;
+  templates?: JobTemplateWithDetails[];
   readOnly?: boolean;
 }) {
   const action = job ? updateJobAction.bind(null, job.id) : createJobAction;
@@ -72,6 +75,7 @@ export function JobForm({
         defaultSiteId={defaultSiteId}
         definitions={definitions}
         customFieldValues={customFieldValues}
+        templates={templates}
         readOnly={readOnly}
       />
 
@@ -104,6 +108,7 @@ function JobFields({
   defaultSiteId,
   definitions,
   customFieldValues,
+  templates,
   readOnly,
 }: {
   job?: Job;
@@ -114,10 +119,41 @@ function JobFields({
   defaultSiteId?: string;
   definitions: Definition[];
   customFieldValues?: Map<string, CustomFieldValue>;
+  templates?: JobTemplateWithDetails[];
   readOnly: boolean;
 }) {
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const selectedTemplate = templates?.find((t) => t.id === selectedTemplateId);
+
   return (
     <>
+      {!job && templates && templates.length > 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="templateId">Template (optional)</Label>
+          <select
+            id="templateId"
+            value={selectedTemplateId}
+            onChange={(e) => setSelectedTemplateId(e.target.value)}
+            disabled={readOnly}
+            className="w-full rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
+          >
+            <option value="">No template</option>
+            {templates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.name}
+              </option>
+            ))}
+          </select>
+          {selectedTemplate && (
+            <input
+              type="hidden"
+              name="templateChecklistItems"
+              value={selectedTemplate.checklistItems.join("\n")}
+            />
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="title">Title</Label>
         <Input
@@ -161,9 +197,12 @@ function JobFields({
         <div className="space-y-2">
           <Label htmlFor="jobType">Job type</Label>
           <Input
+            key={selectedTemplateId}
             id="jobType"
             name="jobType"
-            defaultValue={job?.jobType ?? ""}
+            defaultValue={
+              job?.jobType ?? selectedTemplate?.defaultJobType ?? ""
+            }
             placeholder="e.g. Repair, Installation"
             disabled={readOnly}
           />
@@ -223,12 +262,15 @@ function JobFields({
       </div>
 
       {definitions.length > 0 && (
-        <div className="space-y-4 border-t pt-4">
+        <div key={selectedTemplateId} className="space-y-4 border-t pt-4">
           {definitions.map((definition) => (
             <CustomFieldInput
               key={definition.id}
               definition={definition}
-              defaultValue={customFieldValues?.get(definition.id)}
+              defaultValue={
+                customFieldValues?.get(definition.id) ??
+                selectedTemplate?.fieldDefaults[definition.id]
+              }
               disabled={readOnly}
             />
           ))}

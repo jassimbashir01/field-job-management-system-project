@@ -1,5 +1,6 @@
 import {
   date,
+  boolean,
   integer,
   pgEnum,
   pgTable,
@@ -46,4 +47,14 @@ export const jobs = pgTable("jobs", {
   notes: text(),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+export const jobChecklistItems = pgTable("job_checklist_items", {
+  id: uuid().primaryKey().defaultRandom(),
+  jobId: uuid()
+    .notNull()
+    .references(() => jobs.id, { onDelete: "cascade" }),
+  label: text().notNull(),
+  completed: boolean().notNull().default(false),
+  sortOrder: integer().notNull().default(0),
 });

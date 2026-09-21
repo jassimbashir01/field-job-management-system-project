@@ -12,6 +12,8 @@ import { JobDeleteSection } from "./delete-section";
 import { StatusTransitions } from "./status-transitions";
 import { getActivityLog } from "@/lib/activity-log";
 import { ActivityTimeline } from "@/components/shared/activity-timeline";
+import { jobChecklistItems } from "@/db/schema";
+import { JobChecklist } from "@/components/shared/job-checklist";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,16 @@ export default async function JobDetailPage({
     ]);
   const activityLog = await getActivityLog("job", job.id);
 
+  const checklistItems = await db
+    .select({
+      id: jobChecklistItems.id,
+      label: jobChecklistItems.label,
+      completed: jobChecklistItems.completed,
+    })
+    .from(jobChecklistItems)
+    .where(eq(jobChecklistItems.jobId, job.id))
+    .orderBy(asc(jobChecklistItems.sortOrder));
+
   return (
     <div className="max-w-lg space-y-10">
       <div>
@@ -77,6 +89,11 @@ export default async function JobDetailPage({
         definitions={definitions}
         customFieldValues={fieldValues}
         readOnly={!access.canWrite}
+      />
+      <JobChecklist
+        jobId={job.id}
+        items={checklistItems}
+        disabled={!access.canWrite}
       />
       <div className="mt-8 border-t pt-6">
         <h2 className="mb-4 text-sm font-semibold">Activity</h2>
