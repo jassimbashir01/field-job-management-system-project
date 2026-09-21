@@ -1,3 +1,4 @@
+export * from "./activity-log";
 export * from "./companies";
 export * from "./custom-fields";
 export * from "./customers";

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, count, desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { customers, equipment, jobs, sites } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
@@ -34,23 +34,36 @@ export default async function SiteDetailPage({
     notFound();
   }
 
-  const [allCustomers, definitions, fieldValues, siteEquipment, siteJobs] =
-    await Promise.all([
-      db.select().from(customers).orderBy(asc(customers.name)),
-      getFieldDefinitions("site"),
-      getFieldValues(site.id),
-      db
-        .select()
-        .from(equipment)
-        .where(eq(equipment.siteId, site.id))
-        .orderBy(asc(equipment.name)),
-      db
-        .select()
-        .from(jobs)
-        .where(eq(jobs.siteId, site.id))
-        .orderBy(desc(jobs.createdAt))
-        .limit(10),
-    ]);
+  const [
+    allCustomers,
+    definitions,
+    fieldValues,
+    siteEquipment,
+    siteJobs,
+    [jobsCountRow],
+  ] = await Promise.all([
+    db.select().from(customers).orderBy(asc(customers.name)),
+    getFieldDefinitions("site"),
+    getFieldValues(site.id),
+    db
+      .select()
+      .from(equipment)
+      .where(eq(equipment.siteId, site.id))
+      .orderBy(asc(equipment.name)),
+    db
+      .select({
+        id: jobs.id,
+        jobNumber: jobs.jobNumber,
+        title: jobs.title,
+        status: jobs.status,
+      })
+      .from(jobs)
+      .where(eq(jobs.siteId, site.id))
+      .orderBy(desc(jobs.createdAt))
+      .limit(10),
+    db.select({ value: count() }).from(jobs).where(eq(jobs.siteId, site.id)),
+  ]);
+  const jobsTotal = Number(jobsCountRow?.value ?? 0);
 
   return (
     <div className="max-w-lg space-y-10">
@@ -144,7 +157,12 @@ export default async function SiteDetailPage({
         )}
       </div>
 
-      <SiteDeleteSection site={site} canDelete={access.canDelete} />
+      <SiteDeleteSection
+        site={site}
+        canDelete={access.canDelete}
+        blockingJobs={siteJobs}
+        blockingJobsTotal={jobsTotal}
+      />
     </div>
   );
 }

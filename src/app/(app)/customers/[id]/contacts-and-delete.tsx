@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -155,9 +156,13 @@ export function ContactsSection({
 export function CustomerDeleteSection({
   customer,
   canDelete,
+  blockingJobs = [],
+  blockingJobsTotal = 0,
 }: {
   customer: Customer;
   canDelete: boolean;
+  blockingJobs?: { id: string; jobNumber: number; title: string }[];
+  blockingJobsTotal?: number;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -165,6 +170,37 @@ export function CustomerDeleteSection({
   const [error, setError] = useState<string | null>(null);
 
   if (!canDelete) return null;
+
+  if (blockingJobs.length > 0) {
+    const remaining = blockingJobsTotal - blockingJobs.length;
+    return (
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold">Delete customer</h2>
+        <p className="text-sm text-muted-foreground">
+          Can&apos;t delete this customer yet — {blockingJobsTotal} job
+          {blockingJobsTotal === 1 ? "" : "s"} still reference
+          {blockingJobsTotal === 1 ? "s" : ""} them:
+        </p>
+        <ul className="space-y-1 text-sm">
+          {blockingJobs.map((job) => (
+            <li key={job.id}>
+              <Link href={`/jobs/${job.id}`} className="underline">
+                #{job.jobNumber} — {job.title}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {remaining > 0 && (
+          <p className="text-xs text-muted-foreground">
+            …and {remaining} more.
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Delete or reassign these jobs first, then come back here.
+        </p>
+      </div>
+    );
+  }
 
   if (!confirming) {
     return (

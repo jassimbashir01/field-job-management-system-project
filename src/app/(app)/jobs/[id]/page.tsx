@@ -10,6 +10,8 @@ import { JobStatusBadge } from "@/components/shared/job-status-badge";
 import { JobForm } from "../job-form";
 import { JobDeleteSection } from "./delete-section";
 import { StatusTransitions } from "./status-transitions";
+import { getActivityLog } from "@/lib/activity-log";
+import { ActivityTimeline } from "@/components/shared/activity-timeline";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +47,7 @@ export default async function JobDetailPage({
       getFieldDefinitions("job"),
       getFieldValues(job.id),
     ]);
+  const activityLog = await getActivityLog("job", job.id);
 
   return (
     <div className="max-w-lg space-y-10">
@@ -75,7 +78,10 @@ export default async function JobDetailPage({
         customFieldValues={fieldValues}
         readOnly={!access.canWrite}
       />
-
+      <div className="mt-8 border-t pt-6">
+        <h2 className="mb-4 text-sm font-semibold">Activity</h2>
+        <ActivityTimeline entries={activityLog} />
+      </div>
       <JobDeleteSection job={job} canDelete={access.canDelete} />
     </div>
   );

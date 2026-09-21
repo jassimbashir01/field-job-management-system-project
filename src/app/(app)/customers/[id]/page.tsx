@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, count, desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { customerContacts, customers, jobs, sites } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
@@ -38,27 +38,43 @@ export default async function CustomerDetailPage({
     notFound();
   }
 
-  const [definitions, fieldValues, contacts, customerSites, customerJobs] =
-    await Promise.all([
-      getFieldDefinitions("customer"),
-      getFieldValues(customer.id),
-      db
-        .select()
-        .from(customerContacts)
-        .where(eq(customerContacts.customerId, customer.id))
-        .orderBy(asc(customerContacts.name)),
-      db
-        .select()
-        .from(sites)
-        .where(eq(sites.customerId, customer.id))
-        .orderBy(asc(sites.name)),
-      db
-        .select()
-        .from(jobs)
-        .where(eq(jobs.customerId, customer.id))
-        .orderBy(desc(jobs.createdAt))
-        .limit(10),
-    ]);
+  const [
+    definitions,
+    fieldValues,
+    contacts,
+    customerSites,
+    customerJobs,
+    [jobsCountRow],
+  ] = await Promise.all([
+    getFieldDefinitions("customer"),
+    getFieldValues(customer.id),
+    db
+      .select()
+      .from(customerContacts)
+      .where(eq(customerContacts.customerId, customer.id))
+      .orderBy(asc(customerContacts.name)),
+    db
+      .select()
+      .from(sites)
+      .where(eq(sites.customerId, customer.id))
+      .orderBy(asc(sites.name)),
+    db
+      .select({
+        id: jobs.id,
+        jobNumber: jobs.jobNumber,
+        title: jobs.title,
+        status: jobs.status,
+      })
+      .from(jobs)
+      .where(eq(jobs.customerId, customer.id))
+      .orderBy(desc(jobs.createdAt))
+      .limit(10),
+    db
+      .select({ value: count() })
+      .from(jobs)
+      .where(eq(jobs.customerId, customer.id)),
+  ]);
+  const jobsTotal = Number(jobsCountRow?.value ?? 0);
 
   return (
     <div className="max-w-lg space-y-10">
@@ -153,7 +169,12 @@ export default async function CustomerDetailPage({
         contacts={contacts}
         canWrite={access.canWrite}
       />
-      <CustomerDeleteSection customer={customer} canDelete={access.canDelete} />
+      <CustomerDeleteSection
+        customer={customer}
+        canDelete={access.canDelete}
+        blockingJobs={customerJobs}
+        blockingJobsTotal={jobsTotal}
+      />
     </div>
   );
 }

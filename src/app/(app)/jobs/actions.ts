@@ -8,6 +8,7 @@ import { getDb } from "@/db";
 import { customers, customFieldValues, jobs, sites } from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/auth/permission-catalog";
+import { logActivity } from "@/lib/activity-log";
 import {
   getFieldDefinitions,
   setFieldValues,
@@ -18,13 +19,13 @@ import {
   JOB_STATUS_LABELS,
   type JobStatus,
 } from "@/lib/job-status";
+import { isDateTimeInPast } from "@/lib/week";
 import {
   ConflictError,
   toSafeError,
   ValidationError,
   type SafeError,
 } from "@/lib/errors";
-import { isDateTimeInPast } from "@/lib/week";
 
 const jobSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -93,7 +94,7 @@ export async function createJobAction(
   let newJobId: string;
 
   try {
-    await requirePermission(PERMISSIONS.JOBS_WRITE);
+    const actor = await requirePermission(PERMISSIONS.JOBS_WRITE);
 
     const parsed = jobSchema.safeParse(Object.fromEntries(formData.entries()));
     if (!parsed.success) {
@@ -152,6 +153,15 @@ export async function createJobAction(
         await setFieldValues(created.id, values);
       }
 
+      await logActivity({
+        entityType: "job",
+        entityId: created.id,
+        action: "created",
+        actor,
+        summary: "created this job",
+        tx,
+      });
+
       return created.id;
     });
   } catch (error) {
@@ -167,7 +177,7 @@ export async function updateJobAction(
   formData: FormData,
 ): Promise<FormState> {
   try {
-    await requirePermission(PERMISSIONS.JOBS_WRITE);
+    const actor = await requirePermission(PERMISSIONS.JOBS_WRITE);
 
     const parsed = jobSchema.safeParse(Object.fromEntries(formData.entries()));
     if (!parsed.success) {
@@ -223,11 +233,18 @@ export async function updateJobAction(
         const values = extractCustomFieldValues(formData, definitions);
         await setFieldValues(jobId, values);
       }
+
+      await logActivity({
+        entityType: "job",
+        entityId: jobId,
+        action: "updated",
+        actor,
+        summary: "updated the job details",
+        tx,
+      });
     });
 
     revalidatePath(`/jobs/${jobId}`);
-    revalidatePath("/jobs");
-    revalidatePath("/schedule");
     return { success: true, error: null };
   } catch (error) {
     return { success: false, error: toSafeError(error) };
@@ -239,32 +256,43 @@ export async function transitionJobStatusAction(
   nextStatus: JobStatus,
 ): Promise<FormState> {
   try {
-    await requirePermission(PERMISSIONS.JOBS_WRITE);
+    const actor = await requirePermission(PERMISSIONS.JOBS_WRITE);
 
     const db = getDb();
-    const rows = await db
-      .select({ status: jobs.status })
-      .from(jobs)
-      .where(eq(jobs.id, jobId))
-      .limit(1);
-    const currentStatus = rows[0]?.status;
-    if (!currentStatus) {
-      throw new ConflictError("Job not found.");
-    }
+    await db.transaction(async (tx) => {
+      const rows = await tx
+        .select({ status: jobs.status })
+        .from(jobs)
+        .where(eq(jobs.id, jobId))
+        .limit(1);
+      const currentStatus = rows[0]?.status;
+      if (!currentStatus) {
+        throw new ConflictError("Job not found.");
+      }
 
-    if (!canTransition(currentStatus, nextStatus)) {
-      throw new ConflictError(
-        `Can't move a job from "${JOB_STATUS_LABELS[currentStatus]}" to "${JOB_STATUS_LABELS[nextStatus]}" — that's not a valid transition.`,
-      );
-    }
+      if (!canTransition(currentStatus, nextStatus)) {
+        throw new ConflictError(
+          `Can't move a job from "${JOB_STATUS_LABELS[currentStatus]}" to "${JOB_STATUS_LABELS[nextStatus]}" — that's not a valid transition.`,
+        );
+      }
 
-    await db
-      .update(jobs)
-      .set({ status: nextStatus, updatedAt: new Date() })
-      .where(eq(jobs.id, jobId));
+      await tx
+        .update(jobs)
+        .set({ status: nextStatus, updatedAt: new Date() })
+        .where(eq(jobs.id, jobId));
+
+      await logActivity({
+        entityType: "job",
+        entityId: jobId,
+        action: "status_changed",
+        actor,
+        summary: `changed the status from "${JOB_STATUS_LABELS[currentStatus]}" to "${JOB_STATUS_LABELS[nextStatus]}"`,
+        metadata: { from: currentStatus, to: nextStatus },
+        tx,
+      });
+    });
 
     revalidatePath(`/jobs/${jobId}`);
-    revalidatePath("/jobs");
     return { success: true, error: null };
   } catch (error) {
     return { success: false, error: toSafeError(error) };
@@ -273,10 +301,19 @@ export async function transitionJobStatusAction(
 
 export async function deleteJobAction(jobId: string): Promise<FormState> {
   try {
-    await requirePermission(PERMISSIONS.JOBS_DELETE);
+    const actor = await requirePermission(PERMISSIONS.JOBS_DELETE);
 
     const db = getDb();
     await db.transaction(async (tx) => {
+      await logActivity({
+        entityType: "job",
+        entityId: jobId,
+        action: "deleted",
+        actor,
+        summary: "deleted this job",
+        tx,
+      });
+
       await tx
         .delete(customFieldValues)
         .where(eq(customFieldValues.entityId, jobId));
