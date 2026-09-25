@@ -120,7 +120,6 @@ export async function createJobAction(
       const checklistItems = parseChecklistItems(
         formData.get("templateChecklistItems") as string | null,
       );
-
       if (checklistItems.length > 0) {
         await tx.insert(jobChecklistItems).values(
           checklistItems.map((label, index) => ({
@@ -306,7 +305,7 @@ export async function deleteJobAction(jobId: string): Promise<FormState> {
   redirect("/jobs");
 }
 
-export async function resolveCustomerId(
+async function resolveCustomerId(
   tx: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0],
   formData: FormData,
 ): Promise<string> {
@@ -331,7 +330,7 @@ export async function resolveCustomerId(
   return existingId;
 }
 
-export async function resolveSiteId(
+async function resolveSiteId(
   tx: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0],
   formData: FormData,
   customerId: string,

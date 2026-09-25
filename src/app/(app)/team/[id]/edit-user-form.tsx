@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { users } from "@/db/schema";
 import { useAutoDismiss } from "@/hooks/use-auto-dismiss";
 import {
   RESOURCES,
@@ -35,7 +34,15 @@ const LEVEL_LABELS: Record<AccessLevel | "none", string> = {
   delete: "Read, Write & Delete",
 };
 
-type User = typeof users.$inferSelect;
+interface User {
+  id: string;
+  email: string;
+  role: "admin" | "manager" | "team_member";
+  displayName: string;
+  jobTitle: string | null;
+  isActive: boolean;
+  updatedAt: Date;
+}
 
 export function EditUserForm({
   user,
@@ -73,6 +80,12 @@ function DetailsSection({ user }: { user: User }) {
     Boolean(state.success || state.error),
   );
   const [role, setRole] = useState(user.role);
+
+  useEffect(() => {
+    if (state.success) {
+      window.location.reload();
+    }
+  }, [state.success]);
 
   return (
     <form action={formAction} className="space-y-4">

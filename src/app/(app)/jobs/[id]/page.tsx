@@ -1,19 +1,18 @@
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { customers, jobs, sites, users } from "@/db/schema";
+import { customers, jobChecklistItems, jobs, sites, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions, getFieldValues } from "@/lib/custom-fields";
+import { getActivityLog } from "@/lib/activity-log";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { JobStatusBadge } from "@/components/shared/job-status-badge";
+import { ActivityTimeline } from "@/components/shared/activity-timeline";
+import { JobChecklist } from "@/components/shared/job-checklist";
 import { JobForm } from "../job-form";
 import { JobDeleteSection } from "./delete-section";
 import { StatusTransitions } from "./status-transitions";
-import { getActivityLog } from "@/lib/activity-log";
-import { ActivityTimeline } from "@/components/shared/activity-timeline";
-import { jobChecklistItems } from "@/db/schema";
-import { JobChecklist } from "@/components/shared/job-checklist";
 
 export const dynamic = "force-dynamic";
 
@@ -37,29 +36,35 @@ export default async function JobDetailPage({
     notFound();
   }
 
-  const [allCustomers, allSites, technicians, definitions, fieldValues] =
-    await Promise.all([
-      db.select().from(customers).orderBy(asc(customers.name)),
-      db.select().from(sites).orderBy(asc(sites.name)),
-      db
-        .select()
-        .from(users)
-        .where(eq(users.role, "team_member"))
-        .orderBy(asc(users.displayName)),
-      getFieldDefinitions("job"),
-      getFieldValues(job.id),
-    ]);
-  const activityLog = await getActivityLog("job", job.id);
-
-  const checklistItems = await db
-    .select({
-      id: jobChecklistItems.id,
-      label: jobChecklistItems.label,
-      completed: jobChecklistItems.completed,
-    })
-    .from(jobChecklistItems)
-    .where(eq(jobChecklistItems.jobId, job.id))
-    .orderBy(asc(jobChecklistItems.sortOrder));
+  const [
+    allCustomers,
+    allSites,
+    technicians,
+    definitions,
+    fieldValues,
+    activityLog,
+    checklistItems,
+  ] = await Promise.all([
+    db.select().from(customers).orderBy(asc(customers.name)),
+    db.select().from(sites).orderBy(asc(sites.name)),
+    db
+      .select({ id: users.id, displayName: users.displayName })
+      .from(users)
+      .where(eq(users.role, "team_member"))
+      .orderBy(asc(users.displayName)),
+    getFieldDefinitions("job"),
+    getFieldValues(job.id),
+    getActivityLog("job", job.id),
+    db
+      .select({
+        id: jobChecklistItems.id,
+        label: jobChecklistItems.label,
+        completed: jobChecklistItems.completed,
+      })
+      .from(jobChecklistItems)
+      .where(eq(jobChecklistItems.jobId, job.id))
+      .orderBy(asc(jobChecklistItems.sortOrder)),
+  ]);
 
   return (
     <div className="max-w-lg space-y-10">
@@ -90,15 +95,18 @@ export default async function JobDetailPage({
         customFieldValues={fieldValues}
         readOnly={!access.canWrite}
       />
+
       <JobChecklist
         jobId={job.id}
         items={checklistItems}
         disabled={!access.canWrite}
       />
+
       <div className="mt-8 border-t pt-6">
         <h2 className="mb-4 text-sm font-semibold">Activity</h2>
         <ActivityTimeline entries={activityLog} />
       </div>
+
       <JobDeleteSection job={job} canDelete={access.canDelete} />
     </div>
   );

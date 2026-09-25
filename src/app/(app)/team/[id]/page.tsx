@@ -23,7 +23,19 @@ export default async function EditTeamMemberPage({
   const { id } = await params;
 
   const db = getDb();
-  const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+      displayName: users.displayName,
+      jobTitle: users.jobTitle,
+      isActive: users.isActive,
+      updatedAt: users.updatedAt,
+    })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
   const targetUser = rows[0];
   if (!targetUser) {
     notFound();

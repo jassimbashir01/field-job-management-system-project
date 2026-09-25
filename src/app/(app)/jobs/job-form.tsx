@@ -12,7 +12,6 @@ import type {
   customers,
   jobs,
   sites,
-  users,
 } from "@/db/schema";
 import type { CustomFieldValue } from "@/lib/custom-fields";
 import type { JobTemplateWithDetails } from "@/lib/job-templates";
@@ -24,7 +23,7 @@ const initialState: FormState = { success: false, error: null };
 type Job = typeof jobs.$inferSelect;
 type Customer = typeof customers.$inferSelect;
 type Site = typeof sites.$inferSelect;
-type Technician = typeof users.$inferSelect;
+type Technician = { id: string; displayName: string };
 type Definition = typeof customFieldDefinitions.$inferSelect;
 
 export function JobForm({

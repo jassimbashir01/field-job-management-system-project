@@ -4,9 +4,9 @@ import { customers, sites, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions } from "@/lib/custom-fields";
+import { getJobTemplatesWithDetails } from "@/lib/job-templates";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { JobForm } from "../job-form";
-import { getJobTemplatesWithDetails } from "@/lib/job-templates";
 
 export default async function NewJobPage({
   searchParams,
@@ -27,7 +27,7 @@ export default async function NewJobPage({
       db.select().from(customers).orderBy(asc(customers.name)),
       db.select().from(sites).orderBy(asc(sites.name)),
       db
-        .select()
+        .select({ id: users.id, displayName: users.displayName })
         .from(users)
         .where(eq(users.role, "team_member"))
         .orderBy(asc(users.displayName)),

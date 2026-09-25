@@ -37,7 +37,7 @@ export default async function SchedulePage({
   const db = getDb();
   const [technicians, weekJobs] = await Promise.all([
     db
-      .select()
+      .select({ id: users.id, displayName: users.displayName })
       .from(users)
       .where(eq(users.role, "team_member"))
       .orderBy(asc(users.displayName)),
