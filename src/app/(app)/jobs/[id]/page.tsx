@@ -1,7 +1,16 @@
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { customers, jobChecklistItems, jobs, sites, users } from "@/db/schema";
+import {
+  customers,
+  jobChecklistItems,
+  jobs,
+  sites,
+  users,
+  equipment,
+  jobEquipment,
+} from "@/db/schema";
+import { JobEquipmentSection } from "./job-equipment-section";
 import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions, getFieldValues } from "@/lib/custom-fields";
@@ -44,6 +53,8 @@ export default async function JobDetailPage({
     fieldValues,
     activityLog,
     checklistItems,
+    linkedEquipment,
+    availableEquipment,
   ] = await Promise.all([
     db.select().from(customers).orderBy(asc(customers.name)),
     db.select().from(sites).orderBy(asc(sites.name)),
@@ -64,6 +75,23 @@ export default async function JobDetailPage({
       .from(jobChecklistItems)
       .where(eq(jobChecklistItems.jobId, job.id))
       .orderBy(asc(jobChecklistItems.sortOrder)),
+    db
+      .select({
+        linkId: jobEquipment.id,
+        equipmentId: jobEquipment.equipmentId,
+        name: equipment.name,
+        notes: jobEquipment.notes,
+      })
+      .from(jobEquipment)
+      .innerJoin(equipment, eq(jobEquipment.equipmentId, equipment.id))
+      .where(eq(jobEquipment.jobId, job.id)),
+    job.siteId
+      ? db
+          .select({ id: equipment.id, name: equipment.name })
+          .from(equipment)
+          .where(eq(equipment.siteId, job.siteId))
+          .orderBy(asc(equipment.name))
+      : Promise.resolve([]),
   ]);
 
   return (
@@ -102,6 +130,14 @@ export default async function JobDetailPage({
         disabled={!access.canWrite}
       />
 
+      {job.siteId && (
+        <JobEquipmentSection
+          jobId={job.id}
+          linked={linkedEquipment}
+          available={availableEquipment}
+          disabled={!access.canWrite}
+        />
+      )}
       <div className="mt-8 border-t pt-6">
         <h2 className="mb-4 text-sm font-semibold">Activity</h2>
         <ActivityTimeline entries={activityLog} />

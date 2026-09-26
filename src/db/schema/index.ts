@@ -3,6 +3,7 @@ export * from "./companies";
 export * from "./custom-fields";
 export * from "./customers";
 export * from "./equipment";
+export * from "./job-equipment";
 export * from "./job-templates";
 export * from "./jobs";
 export * from "./password-reset-tokens";
