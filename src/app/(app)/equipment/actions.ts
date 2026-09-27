@@ -5,9 +5,16 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import * as z from "zod";
 import { getDb } from "@/db";
-import { customFieldValues, equipment } from "@/db/schema";
+import {
+  customFieldValues,
+  equipment,
+  jobEquipment,
+  jobs,
+  sites,
+} from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/auth/permission-catalog";
+import { logActivity } from "@/lib/activity-log";
 import {
   getFieldDefinitions,
   setFieldValues,
@@ -138,7 +145,7 @@ export async function updateEquipmentAction(
   formData: FormData,
 ): Promise<FormState> {
   try {
-    await requirePermission(PERMISSIONS.EQUIPMENT_WRITE);
+    const actor = await requirePermission(PERMISSIONS.EQUIPMENT_WRITE);
 
     const parsed = equipmentSchema.safeParse(
       Object.fromEntries(formData.entries()),
@@ -154,26 +161,77 @@ export async function updateEquipmentAction(
     }
 
     const db = getDb();
-    await db
-      .update(equipment)
-      .set({
-        name: parsed.data.name,
-        manufacturer: parsed.data.manufacturer || null,
-        model: parsed.data.model || null,
-        serialNumber: parsed.data.serialNumber || null,
-        installDate: parsed.data.installDate || null,
-        warrantyExpiresAt: parsed.data.warrantyExpiresAt || null,
-        lastServiceDate: parsed.data.lastServiceDate || null,
-        notes: parsed.data.notes || null,
-        updatedAt: new Date(),
-      })
-      .where(eq(equipment.id, equipmentId));
+    await db.transaction(async (tx) => {
+      const currentRows = await tx
+        .select({ siteId: equipment.siteId })
+        .from(equipment)
+        .where(eq(equipment.id, equipmentId))
+        .limit(1);
+      const currentSiteId = currentRows[0]?.siteId;
 
-    const definitions = await getFieldDefinitions("equipment");
-    if (definitions.length > 0) {
-      const values = extractCustomFieldValues(formData, definitions);
-      await setFieldValues(equipmentId, values);
-    }
+      if (currentSiteId !== parsed.data.siteId) {
+        const linkedJobs = await tx
+          .select({ jobNumber: jobs.jobNumber, title: jobs.title })
+          .from(jobEquipment)
+          .innerJoin(jobs, eq(jobEquipment.jobId, jobs.id))
+          .where(eq(jobEquipment.equipmentId, equipmentId));
+
+        const first = linkedJobs[0];
+        if (first) {
+          throw new ConflictError(
+            `Can't move this equipment — it's linked to job #${first.jobNumber} ("${first.title}"). Remove it from that job first.`,
+          );
+        }
+
+        const [oldSiteRows, newSiteRows] = await Promise.all([
+          currentSiteId
+            ? tx
+                .select({ name: sites.name })
+                .from(sites)
+                .where(eq(sites.id, currentSiteId))
+                .limit(1)
+            : Promise.resolve([]),
+          tx
+            .select({ name: sites.name })
+            .from(sites)
+            .where(eq(sites.id, parsed.data.siteId))
+            .limit(1),
+        ]);
+        const oldSiteName = oldSiteRows[0]?.name ?? "no site";
+        const newSiteName = newSiteRows[0]?.name ?? "an unknown site";
+
+        await logActivity({
+          entityType: "equipment",
+          entityId: equipmentId,
+          action: "reassigned",
+          actor,
+          summary: `moved from "${oldSiteName}" to "${newSiteName}"`,
+          tx,
+        });
+      }
+
+      await tx
+        .update(equipment)
+        .set({
+          siteId: parsed.data.siteId,
+          name: parsed.data.name,
+          manufacturer: parsed.data.manufacturer || null,
+          model: parsed.data.model || null,
+          serialNumber: parsed.data.serialNumber || null,
+          installDate: parsed.data.installDate || null,
+          warrantyExpiresAt: parsed.data.warrantyExpiresAt || null,
+          lastServiceDate: parsed.data.lastServiceDate || null,
+          notes: parsed.data.notes || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(equipment.id, equipmentId));
+
+      const definitions = await getFieldDefinitions("equipment");
+      if (definitions.length > 0) {
+        const values = extractCustomFieldValues(formData, definitions);
+        await setFieldValues(equipmentId, values, tx);
+      }
+    });
 
     revalidatePath(`/equipment/${equipmentId}`);
     return { success: true, error: null };

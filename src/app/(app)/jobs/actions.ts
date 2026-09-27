@@ -184,15 +184,9 @@ export async function updateJobAction(
 
     const db = getDb();
     await db.transaction(async (tx) => {
-      const customerId = await resolveCustomerId(tx, formData);
-      const siteId = await resolveSiteId(tx, formData, customerId);
-
       await tx
         .update(jobs)
         .set({
-          customerId,
-          siteId,
-          oneOffLocation: siteId ? null : parsed.data.oneOffLocation || null,
           assignedToUserId: parsed.data.assignedToUserId || null,
           title: parsed.data.title,
           jobType: parsed.data.jobType || null,

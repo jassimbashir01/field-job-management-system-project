@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import Link from "next/link";
+import { useActionState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,12 @@ export function SiteForm({
     Boolean(state.success || state.error),
   );
 
+  useEffect(() => {
+    if (state.success) {
+      window.location.reload();
+    }
+  }, [state.success]);
+
   return (
     <form action={formAction} className="mt-6 space-y-4">
       <SiteFields
@@ -70,7 +77,6 @@ export function SiteForm({
     </form>
   );
 }
-
 function SiteFields({
   site,
   customers,
@@ -86,28 +92,47 @@ function SiteFields({
   customFieldValues?: Map<string, CustomFieldValue>;
   readOnly: boolean;
 }) {
+  const customerName = site
+    ? customers.find((c) => c.id === site.customerId)?.name
+    : undefined;
+
   return (
     <>
-      <div className="space-y-2">
-        <Label htmlFor="customerId">Customer</Label>
-        <select
-          id="customerId"
-          name="customerId"
-          defaultValue={site?.customerId ?? defaultCustomerId ?? ""}
-          disabled={readOnly}
-          className="w-full rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
-          required
-        >
-          <option value="" disabled>
-            Select a customer…
-          </option>
-          {customers.map((customer) => (
-            <option key={customer.id} value={customer.id}>
-              {customer.name}
+      {site ? (
+        <div className="space-y-1 rounded-md border bg-muted/30 p-3">
+          <p className="text-sm font-medium">Customer</p>
+          <p className="text-sm">
+            <Link href={`/customers/${site.customerId}`} className="underline">
+              {customerName ?? "Unknown customer"}
+            </Link>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Can&apos;t be changed after the site is created — delete this site
+            and create a new one for a different customer.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="customerId">Customer</Label>
+          <select
+            id="customerId"
+            name="customerId"
+            defaultValue={defaultCustomerId ?? ""}
+            disabled={readOnly}
+            className="w-full rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
+            required
+          >
+            <option value="" disabled>
+              Select a customer…
             </option>
-          ))}
-        </select>
-      </div>
+            {customers.map((customer) => (
+              <option key={customer.id} value={customer.id}>
+                {customer.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="name">Site name</Label>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,7 +98,6 @@ export function JobForm({
     </form>
   );
 }
-
 function JobFields({
   job,
   customers,
@@ -123,6 +123,13 @@ function JobFields({
 }) {
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const selectedTemplate = templates?.find((t) => t.id === selectedTemplateId);
+
+  const customerName = job
+    ? customers.find((c) => c.id === job.customerId)?.name
+    : undefined;
+  const siteName = job?.siteId
+    ? sites.find((s) => s.id === job.siteId)?.name
+    : undefined;
 
   return (
     <>
@@ -165,15 +172,42 @@ function JobFields({
         />
       </div>
 
-      <CustomerAndSitePickers
-        customers={customers}
-        sites={sites}
-        defaultCustomerId={job?.customerId ?? defaultCustomerId}
-        defaultSiteId={job?.siteId ?? defaultSiteId}
-        defaultOneOffLocation={job?.oneOffLocation}
-        disabled={readOnly}
-      />
-
+      {job ? (
+        <div className="space-y-1 rounded-md border bg-muted/30 p-3">
+          <p className="text-sm font-medium">Customer &amp; site</p>
+          <p className="text-sm">
+            {job.customerId ? (
+              <Link href={`/customers/${job.customerId}`} className="underline">
+                {customerName ?? "Unknown customer"}
+              </Link>
+            ) : (
+              (customerName ?? "Unknown customer")
+            )}
+            {job.siteId && (
+              <>
+                {" — "}
+                <Link href={`/sites/${job.siteId}`} className="underline">
+                  {siteName ?? "Unknown site"}
+                </Link>
+              </>
+            )}
+            {!job.siteId && job.oneOffLocation && ` — ${job.oneOffLocation}`}
+            {!job.siteId && !job.oneOffLocation && " — No site"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Can&apos;t be changed after the job is created — delete this job and
+            create a new one for a different customer or site.
+          </p>
+        </div>
+      ) : (
+        <CustomerAndSitePickers
+          customers={customers}
+          sites={sites}
+          defaultCustomerId={defaultCustomerId}
+          defaultSiteId={defaultSiteId}
+          disabled={readOnly}
+        />
+      )}
       <div className="space-y-2">
         <Label htmlFor="assignedToUserId">Assigned to</Label>
         <select

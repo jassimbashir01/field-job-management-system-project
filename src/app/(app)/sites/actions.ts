@@ -148,6 +148,9 @@ export async function updateSiteAction(
     }
 
     const db = getDb();
+    // customerId is deliberately absent here — it's locked at creation
+    // (Section 15.9's decision). The form no longer submits it for an
+    // edit, and even if it did, this action wouldn't act on it.
     await db
       .update(sites)
       .set({

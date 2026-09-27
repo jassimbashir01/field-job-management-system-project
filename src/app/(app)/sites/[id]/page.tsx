@@ -6,9 +6,11 @@ import { customers, equipment, jobs, sites } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions, getFieldValues } from "@/lib/custom-fields";
+import { getActivityLog } from "@/lib/activity-log";
 import { Button } from "@/components/ui/button";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { JobStatusBadge } from "@/components/shared/job-status-badge";
+import { ActivityTimeline } from "@/components/shared/activity-timeline";
 import { SiteForm } from "../site-form";
 import { SiteDeleteSection } from "./delete-section";
 
@@ -41,6 +43,7 @@ export default async function SiteDetailPage({
     siteEquipment,
     siteJobs,
     [jobsCountRow],
+    activityLog,
   ] = await Promise.all([
     db.select().from(customers).orderBy(asc(customers.name)),
     getFieldDefinitions("site"),
@@ -62,6 +65,7 @@ export default async function SiteDetailPage({
       .orderBy(desc(jobs.createdAt))
       .limit(10),
     db.select({ value: count() }).from(jobs).where(eq(jobs.siteId, site.id)),
+    getActivityLog("site", site.id),
   ]);
   const jobsTotal = Number(jobsCountRow?.value ?? 0);
 
@@ -155,6 +159,11 @@ export default async function SiteDetailPage({
             ))}
           </div>
         )}
+      </div>
+
+      <div className="mt-8 border-t pt-6">
+        <h2 className="mb-4 text-sm font-semibold">Activity</h2>
+        <ActivityTimeline entries={activityLog} />
       </div>
 
       <SiteDeleteSection

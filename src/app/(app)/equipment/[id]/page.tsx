@@ -1,15 +1,17 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { desc, asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { equipment, sites, jobEquipment, jobs } from "@/db/schema";
+import { equipment, jobEquipment, jobs, sites } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions, getFieldValues } from "@/lib/custom-fields";
+import { getActivityLog } from "@/lib/activity-log";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
+import { JobStatusBadge } from "@/components/shared/job-status-badge";
+import { ActivityTimeline } from "@/components/shared/activity-timeline";
 import { EquipmentForm } from "../equipment-form";
 import { EquipmentDeleteSection } from "./delete-section";
-import { JobStatusBadge } from "@/components/shared/job-status-badge";
-import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -37,24 +39,26 @@ export default async function EquipmentDetailPage({
     notFound();
   }
 
-  const [allSites, definitions, fieldValues, jobHistory] = await Promise.all([
-    db.select().from(sites).orderBy(asc(sites.name)),
-    getFieldDefinitions("equipment"),
-    getFieldValues(equipmentItem.id),
-    db
-      .select({
-        jobId: jobs.id,
-        jobNumber: jobs.jobNumber,
-        title: jobs.title,
-        status: jobs.status,
-        notes: jobEquipment.notes,
-      })
-      .from(jobEquipment)
-      .innerJoin(jobs, eq(jobEquipment.jobId, jobs.id))
-      .where(eq(jobEquipment.equipmentId, equipmentItem.id))
-      .orderBy(desc(jobs.createdAt))
-      .limit(10),
-  ]);
+  const [allSites, definitions, fieldValues, jobHistory, activityLog] =
+    await Promise.all([
+      db.select().from(sites).orderBy(asc(sites.name)),
+      getFieldDefinitions("equipment"),
+      getFieldValues(equipmentItem.id),
+      db
+        .select({
+          jobId: jobs.id,
+          jobNumber: jobs.jobNumber,
+          title: jobs.title,
+          status: jobs.status,
+          notes: jobEquipment.notes,
+        })
+        .from(jobEquipment)
+        .innerJoin(jobs, eq(jobEquipment.jobId, jobs.id))
+        .where(eq(jobEquipment.equipmentId, equipmentItem.id))
+        .orderBy(desc(jobs.createdAt))
+        .limit(10),
+      getActivityLog("equipment", equipmentItem.id),
+    ]);
 
   return (
     <div className="max-w-lg space-y-10">
@@ -73,6 +77,7 @@ export default async function EquipmentDetailPage({
           readOnly={!access.canWrite}
         />
       </div>
+
       <div className="space-y-3">
         <h2 className="text-sm font-semibold">Job history</h2>
         {jobHistory.length === 0 ? (
@@ -103,6 +108,12 @@ export default async function EquipmentDetailPage({
           </div>
         )}
       </div>
+
+      <div className="mt-8 border-t pt-6">
+        <h2 className="mb-4 text-sm font-semibold">Activity</h2>
+        <ActivityTimeline entries={activityLog} />
+      </div>
+
       <EquipmentDeleteSection
         equipment={equipmentItem}
         canDelete={access.canDelete}

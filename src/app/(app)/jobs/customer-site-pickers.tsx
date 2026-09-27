@@ -16,25 +16,19 @@ export function CustomerAndSitePickers({
   sites,
   defaultCustomerId,
   defaultSiteId,
-  defaultOneOffLocation,
   disabled,
 }: {
   customers: Customer[];
   sites: Site[];
   defaultCustomerId?: string;
   defaultSiteId?: string;
-  defaultOneOffLocation?: string | null;
   disabled?: boolean;
 }) {
   const [customerSelection, setCustomerSelection] = useState(
     defaultCustomerId ?? "",
   );
-  const [siteSelection, setSiteSelection] = useState(
-    defaultSiteId ?? (defaultOneOffLocation ? ONE_OFF : ""),
-  );
-  const [oneOffLocationValue, setOneOffLocationValue] = useState(
-    defaultOneOffLocation ?? "",
-  );
+  const [siteSelection, setSiteSelection] = useState(defaultSiteId ?? "");
+  const [oneOffLocationValue, setOneOffLocationValue] = useState("");
   const isNewCustomer = customerSelection === NEW;
   const isNewSite = siteSelection === NEW;
   const isOneOff = siteSelection === ONE_OFF;
@@ -55,9 +49,6 @@ export function CustomerAndSitePickers({
           onChange={(e) => {
             setCustomerSelection(e.target.value);
             setSiteSelection("");
-            // A one-off location typed for the old customer doesn't
-            // belong to the new one either — same reasoning as clearing
-            // siteSelection above, just never applied here until now.
             setOneOffLocationValue("");
           }}
           className="w-full rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
