@@ -71,6 +71,13 @@
       "when": 1790446420047,
       "tag": "0009_needy_the_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790777526609,
+      "tag": "0010_perfect_guardian",
+      "breakpoints": true
     }
   ]
 }

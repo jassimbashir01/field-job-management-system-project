@@ -9,12 +9,15 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [],
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "4.4mb",
+    },
+  },
 };
 
 export default nextConfig;
 
-// Cloudflare bindings initialise only when explicitly opted into locally —
-// `pnpm dev` must work on a machine with no Wrangler configuration at all.
 if (
   process.env.NODE_ENV === "development" &&
   process.env.DEPLOY_TARGET === "cloudflare"

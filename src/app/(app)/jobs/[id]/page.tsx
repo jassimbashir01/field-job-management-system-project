@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { desc, asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   customers,
@@ -9,6 +9,7 @@ import {
   users,
   equipment,
   jobEquipment,
+  jobFiles,
 } from "@/db/schema";
 import { JobEquipmentSection } from "./job-equipment-section";
 import { requireUser } from "@/lib/auth/guards";
@@ -22,6 +23,7 @@ import { JobChecklist } from "@/components/shared/job-checklist";
 import { JobForm } from "../job-form";
 import { JobDeleteSection } from "./delete-section";
 import { StatusTransitions } from "./status-transitions";
+import { JobFilesSection } from "./job-files-section";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +96,20 @@ export default async function JobDetailPage({
       : Promise.resolve([]),
   ]);
 
+  const files = await db
+    .select({
+      id: jobFiles.id,
+      fileName: jobFiles.fileName,
+      contentType: jobFiles.contentType,
+      sizeBytes: jobFiles.sizeBytes,
+      caption: jobFiles.caption,
+      uploadedByDisplayName: jobFiles.uploadedByDisplayName,
+      createdAt: jobFiles.createdAt,
+    })
+    .from(jobFiles)
+    .where(eq(jobFiles.jobId, job.id))
+    .orderBy(desc(jobFiles.createdAt));
+
   return (
     <div className="max-w-lg space-y-10">
       <div>
@@ -138,6 +154,13 @@ export default async function JobDetailPage({
           disabled={!access.canWrite}
         />
       )}
+
+      <JobFilesSection
+        jobId={job.id}
+        files={files}
+        disabled={!access.canWrite}
+      />
+
       <div className="mt-8 border-t pt-6">
         <h2 className="mb-4 text-sm font-semibold">Activity</h2>
         <ActivityTimeline entries={activityLog} />
