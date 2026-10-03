@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { desc, asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   customers,
   jobChecklistItems,
+  jobRecurrences,
   jobs,
   sites,
   users,
@@ -24,6 +26,7 @@ import { JobForm } from "../job-form";
 import { JobDeleteSection } from "./delete-section";
 import { StatusTransitions } from "./status-transitions";
 import { JobFilesSection } from "./job-files-section";
+import { CreateFollowUpButton } from "./create-follow-up-button";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +60,9 @@ export default async function JobDetailPage({
     checklistItems,
     linkedEquipment,
     availableEquipment,
+    followUpSource,
+    followUps,
+    recurrence,
   ] = await Promise.all([
     db.select().from(customers).orderBy(asc(customers.name)),
     db.select().from(sites).orderBy(asc(sites.name)),
@@ -94,6 +100,30 @@ export default async function JobDetailPage({
           .where(eq(equipment.siteId, job.siteId))
           .orderBy(asc(equipment.name))
       : Promise.resolve([]),
+    job.followUpFromJobId
+      ? db
+          .select({ id: jobs.id, jobNumber: jobs.jobNumber, title: jobs.title })
+          .from(jobs)
+          .where(eq(jobs.id, job.followUpFromJobId))
+          .limit(1)
+      : Promise.resolve([]),
+    db
+      .select({
+        id: jobs.id,
+        jobNumber: jobs.jobNumber,
+        title: jobs.title,
+        status: jobs.status,
+      })
+      .from(jobs)
+      .where(eq(jobs.followUpFromJobId, job.id))
+      .orderBy(desc(jobs.createdAt)),
+    job.recurrenceId
+      ? db
+          .select({ id: jobRecurrences.id, title: jobRecurrences.title })
+          .from(jobRecurrences)
+          .where(eq(jobRecurrences.id, job.recurrenceId))
+          .limit(1)
+      : Promise.resolve([]),
   ]);
 
   const files = await db
@@ -125,6 +155,47 @@ export default async function JobDetailPage({
           </p>
         )}
       </div>
+
+      {(followUpSource[0] || recurrence[0] || followUps.length > 0) && (
+        <div className="space-y-1 text-sm text-muted-foreground">
+          {followUpSource[0] && (
+            <p>
+              Follow-up of{" "}
+              <Link
+                href={`/jobs/${followUpSource[0].id}`}
+                className="underline"
+              >
+                #{followUpSource[0].jobNumber} — {followUpSource[0].title}
+              </Link>
+            </p>
+          )}
+          {recurrence[0] && (
+            <p>
+              Part of the recurring series{" "}
+              <Link
+                href={`/jobs/recurring/${recurrence[0].id}`}
+                className="underline"
+              >
+                {recurrence[0].title}
+              </Link>
+            </p>
+          )}
+          {followUps.length > 0 && (
+            <div>
+              <p>Follow-up jobs:</p>
+              <ul className="list-inside list-disc">
+                {followUps.map((f) => (
+                  <li key={f.id}>
+                    <Link href={`/jobs/${f.id}`} className="underline">
+                      #{f.jobNumber} — {f.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {access.canWrite && (
         <StatusTransitions jobId={job.id} status={job.status} />
@@ -160,6 +231,8 @@ export default async function JobDetailPage({
         files={files}
         disabled={!access.canWrite}
       />
+
+      {access.canWrite && <CreateFollowUpButton jobId={job.id} />}
 
       <div className="mt-8 border-t pt-6">
         <h2 className="mb-4 text-sm font-semibold">Activity</h2>

@@ -20,12 +20,16 @@ const addSchema = z.object({
 });
 
 function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: string }).code === "23505"
-  );
+  let current: unknown = error;
+  while (current && typeof current === "object") {
+    if ("code" in current && (current as { code?: string }).code === "23505") {
+      return true;
+    }
+    const cause = (current as { cause?: unknown }).cause;
+    if (cause === current) break;
+    current = cause;
+  }
+  return false;
 }
 
 export async function addJobEquipmentAction(

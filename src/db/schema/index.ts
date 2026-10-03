@@ -5,6 +5,7 @@ export * from "./customers";
 export * from "./equipment";
 export * from "./job-equipment";
 export * from "./job-files";
+export * from "./job-recurrences";
 export * from "./job-templates";
 export * from "./jobs";
 export * from "./password-reset-tokens";

@@ -78,6 +78,13 @@
       "when": 1790777526609,
       "tag": "0010_perfect_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790948558907,
+      "tag": "0011_aromatic_sunset_bain",
+      "breakpoints": true
     }
   ]
 }

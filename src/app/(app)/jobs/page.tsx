@@ -10,6 +10,8 @@ import { JobSearchInput } from "./search-input";
 import { JobStatusQuickSelect } from "./status-quick-select";
 import { type JobStatus } from "@/lib/job-status";
 import { JobStatusFilter } from "./status-filter";
+import { ensureRecurringJobsGenerated } from "@/lib/job-recurrence";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,18 @@ export default async function JobsPage({
   const access = await getResourceAccess(viewer, "jobs");
   if (!access.canRead) {
     return <ForbiddenMessage />;
+  }
+
+  const recurringAccess = await getResourceAccess(viewer, "recurring_jobs");
+  try {
+    await ensureRecurringJobsGenerated(viewer);
+  } catch (error) {
+    logger.error("Recurring job generation failed", {
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message }
+          : error,
+    });
   }
 
   const { q, status } = await searchParams;
@@ -69,12 +83,21 @@ export default async function JobsPage({
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Jobs</h1>
-        {access.canWrite && (
-          <Button
-            render={<Link href="/jobs/new">New job</Link>}
-            nativeButton={false}
-          />
-        )}
+        <div className="flex items-center gap-2">
+          {recurringAccess.canRead && (
+            <Button
+              variant="outline"
+              render={<Link href="/jobs/recurring">Recurring jobs</Link>}
+              nativeButton={false}
+            />
+          )}
+          {access.canWrite && (
+            <Button
+              render={<Link href="/jobs/new">New job</Link>}
+              nativeButton={false}
+            />
+          )}
+        </div>
       </div>
 
       <form method="get" className="mt-4 flex gap-2">
