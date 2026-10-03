@@ -51,10 +51,12 @@ export default async function JobsPage({
       title: jobs.title,
       status: jobs.status,
       scheduledDate: jobs.scheduledDate,
+      scheduledTime: jobs.scheduledTime,
+      assignedToUserId: jobs.assignedToUserId,
+      oneOffLocation: jobs.oneOffLocation, // ← add this
       customerName: customers.name,
       siteName: sites.name,
       technicianName: users.displayName,
-      oneOffLocation: jobs.oneOffLocation,
     })
     .from(jobs)
     .innerJoin(customers, eq(jobs.customerId, customers.id))
@@ -131,6 +133,9 @@ export default async function JobsPage({
             <JobStatusQuickSelect
               jobId={job.id}
               status={job.status}
+              scheduledDate={job.scheduledDate}
+              scheduledTime={job.scheduledTime}
+              assignedToUserId={job.assignedToUserId}
               disabled={!access.canWrite}
             />
           </div>

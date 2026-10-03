@@ -198,7 +198,13 @@ export default async function JobDetailPage({
       )}
 
       {access.canWrite && (
-        <StatusTransitions jobId={job.id} status={job.status} />
+        <StatusTransitions
+          jobId={job.id}
+          status={job.status}
+          scheduledDate={job.scheduledDate}
+          scheduledTime={job.scheduledTime}
+          assignedToUserId={job.assignedToUserId}
+        />
       )}
 
       <JobForm

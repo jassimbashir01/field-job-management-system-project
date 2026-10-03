@@ -232,18 +232,39 @@ export async function transitionJobStatusAction(
     const db = getDb();
     await db.transaction(async (tx) => {
       const rows = await tx
-        .select({ status: jobs.status })
+        .select({
+          status: jobs.status,
+          scheduledDate: jobs.scheduledDate,
+          scheduledTime: jobs.scheduledTime,
+          assignedToUserId: jobs.assignedToUserId,
+        })
         .from(jobs)
         .where(eq(jobs.id, jobId))
         .limit(1);
-      const currentStatus = rows[0]?.status;
-      if (!currentStatus) {
+      const current = rows[0];
+      if (!current) {
         throw new ConflictError("Job not found.");
       }
+      const currentStatus = current.status;
 
       if (!canTransition(currentStatus, nextStatus)) {
         throw new ConflictError(
           `Can't move a job from "${JOB_STATUS_LABELS[currentStatus]}" to "${JOB_STATUS_LABELS[nextStatus]}" — that's not a valid transition.`,
+        );
+      }
+
+      if (
+        nextStatus === "scheduled" &&
+        (!current.scheduledDate || !current.scheduledTime)
+      ) {
+        throw new ConflictError(
+          'This job needs both a scheduled date and a scheduled time before it can move to "Scheduled." Set those on the job form first.',
+        );
+      }
+
+      if (nextStatus === "assigned" && !current.assignedToUserId) {
+        throw new ConflictError(
+          'This job needs a technician assigned before it can move to "Assigned." Set that on the job form first.',
         );
       }
 
