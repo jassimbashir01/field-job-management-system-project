@@ -11,30 +11,16 @@ import { transitionJobStatusAction } from "./actions";
 export function JobStatusQuickSelect({
   jobId,
   status,
-  scheduledDate,
-  scheduledTime,
-  assignedToUserId,
   disabled,
 }: {
   jobId: string;
   status: JobStatus;
-  scheduledDate: string | null;
-  scheduledTime: string | null;
-  assignedToUserId: string | null;
   disabled?: boolean;
 }) {
   const [current, setCurrent] = useState(status);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const options = [current, ...JOB_STATUS_TRANSITIONS[current]];
-
-  // Same prerequisites as `StatusTransitions` — see the Amendment
-  // above for why these two statuses specifically.
-  function isBlocked(option: JobStatus): boolean {
-    if (option === "scheduled") return !scheduledDate || !scheduledTime;
-    if (option === "assigned") return !assignedToUserId;
-    return false;
-  }
 
   if (disabled || options.length <= 1) {
     return (
@@ -68,9 +54,8 @@ export function JobStatusQuickSelect({
         className="rounded-md border border-input px-2 py-1 text-xs"
       >
         {options.map((option) => (
-          <option key={option} value={option} disabled={isBlocked(option)}>
+          <option key={option} value={option}>
             {JOB_STATUS_LABELS[option]}
-            {isBlocked(option) ? " (needs setup)" : ""}
           </option>
         ))}
       </select>

@@ -133,9 +133,6 @@ export default async function JobsPage({
             <JobStatusQuickSelect
               jobId={job.id}
               status={job.status}
-              scheduledDate={job.scheduledDate}
-              scheduledTime={job.scheduledTime}
-              assignedToUserId={job.assignedToUserId}
               disabled={!access.canWrite}
             />
           </div>

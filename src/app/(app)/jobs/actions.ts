@@ -23,6 +23,8 @@ import {
 import { parseChecklistItems } from "@/lib/job-templates";
 import {
   canTransition,
+  computeAutoStatus,
+  deriveStatusFromData,
   JOB_STATUS_LABELS,
   type JobStatus,
 } from "@/lib/job-status";
@@ -91,20 +93,27 @@ export async function createJobAction(
       const customerId = await resolveCustomerId(tx, formData);
       const siteId = await resolveSiteId(tx, formData, customerId);
 
+      const scheduledDate = parsed.data.scheduledDate || null;
+      const assignedToUserId = parsed.data.assignedToUserId || null;
+
       const [created] = await tx
         .insert(jobs)
         .values({
           customerId,
           siteId,
           oneOffLocation: siteId ? null : parsed.data.oneOffLocation || null,
-          assignedToUserId: parsed.data.assignedToUserId || null,
+          assignedToUserId,
           title: parsed.data.title,
           jobType: parsed.data.jobType || null,
           description: parsed.data.description || null,
           reference: parsed.data.reference || null,
-          scheduledDate: parsed.data.scheduledDate || null,
+          scheduledDate,
           scheduledTime: parsed.data.scheduledTime || null,
           notes: parsed.data.notes || null,
+          status: deriveStatusFromData(
+            Boolean(scheduledDate),
+            Boolean(assignedToUserId),
+          ),
         })
         .returning();
 
@@ -184,17 +193,35 @@ export async function updateJobAction(
 
     const db = getDb();
     await db.transaction(async (tx) => {
+      const rows = await tx
+        .select({ status: jobs.status })
+        .from(jobs)
+        .where(eq(jobs.id, jobId))
+        .limit(1);
+      const currentStatus = rows[0]?.status;
+      if (!currentStatus) {
+        throw new ConflictError("Job not found.");
+      }
+
+      const scheduledDate = parsed.data.scheduledDate || null;
+      const assignedToUserId = parsed.data.assignedToUserId || null;
+
       await tx
         .update(jobs)
         .set({
-          assignedToUserId: parsed.data.assignedToUserId || null,
+          assignedToUserId,
           title: parsed.data.title,
           jobType: parsed.data.jobType || null,
           description: parsed.data.description || null,
           reference: parsed.data.reference || null,
-          scheduledDate: parsed.data.scheduledDate || null,
+          scheduledDate,
           scheduledTime: parsed.data.scheduledTime || null,
           notes: parsed.data.notes || null,
+          status: computeAutoStatus(
+            currentStatus,
+            Boolean(scheduledDate),
+            Boolean(assignedToUserId),
+          ),
           updatedAt: new Date(),
         })
         .where(eq(jobs.id, jobId));
@@ -232,39 +259,18 @@ export async function transitionJobStatusAction(
     const db = getDb();
     await db.transaction(async (tx) => {
       const rows = await tx
-        .select({
-          status: jobs.status,
-          scheduledDate: jobs.scheduledDate,
-          scheduledTime: jobs.scheduledTime,
-          assignedToUserId: jobs.assignedToUserId,
-        })
+        .select({ status: jobs.status })
         .from(jobs)
         .where(eq(jobs.id, jobId))
         .limit(1);
-      const current = rows[0];
-      if (!current) {
+      const currentStatus = rows[0]?.status;
+      if (!currentStatus) {
         throw new ConflictError("Job not found.");
       }
-      const currentStatus = current.status;
 
       if (!canTransition(currentStatus, nextStatus)) {
         throw new ConflictError(
           `Can't move a job from "${JOB_STATUS_LABELS[currentStatus]}" to "${JOB_STATUS_LABELS[nextStatus]}" — that's not a valid transition.`,
-        );
-      }
-
-      if (
-        nextStatus === "scheduled" &&
-        (!current.scheduledDate || !current.scheduledTime)
-      ) {
-        throw new ConflictError(
-          'This job needs both a scheduled date and a scheduled time before it can move to "Scheduled." Set those on the job form first.',
-        );
-      }
-
-      if (nextStatus === "assigned" && !current.assignedToUserId) {
-        throw new ConflictError(
-          'This job needs a technician assigned before it can move to "Assigned." Set that on the job form first.',
         );
       }
 
@@ -280,6 +286,57 @@ export async function transitionJobStatusAction(
         actor,
         summary: `changed the status from "${JOB_STATUS_LABELS[currentStatus]}" to "${JOB_STATUS_LABELS[nextStatus]}"`,
         metadata: { from: currentStatus, to: nextStatus },
+        tx,
+      });
+    });
+
+    revalidatePath(`/jobs/${jobId}`);
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: toSafeError(error) };
+  }
+}
+
+export async function reopenJobAction(jobId: string): Promise<FormState> {
+  try {
+    const actor = await requirePermission(PERMISSIONS.JOBS_WRITE);
+
+    const db = getDb();
+    await db.transaction(async (tx) => {
+      const rows = await tx
+        .select({
+          status: jobs.status,
+          scheduledDate: jobs.scheduledDate,
+          assignedToUserId: jobs.assignedToUserId,
+        })
+        .from(jobs)
+        .where(eq(jobs.id, jobId))
+        .limit(1);
+      const current = rows[0];
+      if (!current) {
+        throw new ConflictError("Job not found.");
+      }
+      if (current.status !== "incomplete") {
+        throw new ConflictError("Only an incomplete job can be reopened.");
+      }
+
+      const nextStatus = deriveStatusFromData(
+        Boolean(current.scheduledDate),
+        Boolean(current.assignedToUserId),
+      );
+
+      await tx
+        .update(jobs)
+        .set({ status: nextStatus, updatedAt: new Date() })
+        .where(eq(jobs.id, jobId));
+
+      await logActivity({
+        entityType: "job",
+        entityId: jobId,
+        action: "status_changed",
+        actor,
+        summary: `reopened the job — changed the status from "Incomplete" to "${JOB_STATUS_LABELS[nextStatus]}"`,
+        metadata: { from: "incomplete", to: nextStatus },
         tx,
       });
     });

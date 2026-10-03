@@ -62,13 +62,23 @@ export function RecurrenceForm({
       )}
 
       {!readOnly && (
-        <Button type="submit" disabled={isPending}>
-          {isPending
-            ? "Saving…"
-            : recurrence
-              ? "Save changes"
-              : "Create recurring job"}
-        </Button>
+        <>
+          {recurrence && (
+            <p className="text-xs text-muted-foreground">
+              Saving changes here only affects jobs this series generates from
+              now on — jobs it has already created, including ones dated in the
+              future, are not changed. To change one of those, open it directly
+              from the list below.
+            </p>
+          )}
+          <Button type="submit" disabled={isPending}>
+            {isPending
+              ? "Saving…"
+              : recurrence
+                ? "Save changes"
+                : "Create recurring job"}
+          </Button>
+        </>
       )}
     </form>
   );

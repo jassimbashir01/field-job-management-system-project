@@ -4,6 +4,7 @@ import { jobRecurrences, jobs } from "@/db/schema";
 import { logActivity } from "@/lib/activity-log";
 import { ConflictError } from "@/lib/errors";
 import type { SessionUser } from "@/lib/auth/session";
+import { deriveStatusFromData } from "@/lib/job-status";
 
 type IntervalUnit = "day" | "week" | "month";
 type Recurrence = typeof jobRecurrences.$inferSelect;
@@ -62,6 +63,10 @@ async function generateOneOccurrence(
           reference: recurrence.reference,
           scheduledDate: occurrenceDate,
           scheduledTime: recurrence.scheduledTime,
+          status: deriveStatusFromData(
+            true,
+            Boolean(recurrence.assignedToUserId),
+          ),
           recurrenceId: recurrence.id,
           occurrenceDate,
         })
