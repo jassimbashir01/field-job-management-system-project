@@ -8,6 +8,7 @@ import {
   Users2,
   Users,
   Wrench,
+  FileText,
 } from "lucide-react";
 
 export interface NavItem {
@@ -27,6 +28,8 @@ export const NAV_ITEMS: NavItem[] = [
     icon: CalendarDays,
     resourceKey: "jobs",
   },
+
+  { label: "Quotes", href: "/quotes", icon: FileText, resourceKey: "quotes" },
   {
     label: "Customers",
     href: "/customers",

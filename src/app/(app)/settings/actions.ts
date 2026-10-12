@@ -20,6 +20,9 @@ const settingsSchema = z.object({
   region: z.string().optional(),
   postalCode: z.string().optional(),
   country: z.string().optional(),
+  currency: z
+    .string()
+    .length(3, "Use a 3-letter currency code, like USD or GBP"),
   timezone: z.string().refine((tz) => {
     try {
       new Intl.DateTimeFormat("en-US", { timeZone: tz });

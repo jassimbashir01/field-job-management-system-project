@@ -11,6 +11,8 @@ const TABS: { entityType: EntityType; label: string }[] = [
   { entityType: "customer", label: "Customers" },
   { entityType: "site", label: "Sites" },
   { entityType: "equipment", label: "Equipment" },
+  { entityType: "job", label: "Jobs" },
+  { entityType: "quote", label: "Quotes" },
 ];
 
 export const dynamic = "force-dynamic";

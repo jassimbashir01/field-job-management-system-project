@@ -5,13 +5,8 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import * as z from "zod";
 import { getDb } from "@/db";
-import {
-  customers,
-  customFieldValues,
-  jobChecklistItems,
-  jobs,
-  sites,
-} from "@/db/schema";
+import { resolveCustomerId, resolveSiteId } from "@/lib/resolve-customer-site";
+import { customFieldValues, jobChecklistItems, jobs } from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/auth/permission-catalog";
 import { logActivity } from "@/lib/activity-log";
@@ -29,12 +24,7 @@ import {
   type JobStatus,
 } from "@/lib/job-status";
 import { isDateTimeInPast } from "@/lib/week";
-import {
-  ConflictError,
-  toSafeError,
-  ValidationError,
-  type SafeError,
-} from "@/lib/errors";
+import { ConflictError, toSafeError, type SafeError } from "@/lib/errors";
 
 const jobSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -375,56 +365,6 @@ export async function deleteJobAction(jobId: string): Promise<FormState> {
   }
 
   redirect("/jobs");
-}
-
-async function resolveCustomerId(
-  tx: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0],
-  formData: FormData,
-): Promise<string> {
-  const newName = formData.get("newCustomerName");
-  if (newName && String(newName).trim()) {
-    const [created] = await tx
-      .insert(customers)
-      .values({
-        name: String(newName).trim(),
-        phone: (formData.get("newCustomerPhone") as string) || null,
-        email: (formData.get("newCustomerEmail") as string) || null,
-      })
-      .returning();
-    if (!created) throw new ConflictError("Could not create the new customer.");
-    return created.id;
-  }
-
-  const existingId = formData.get("customerId");
-  if (typeof existingId !== "string" || !existingId) {
-    throw new ValidationError("A customer is required.");
-  }
-  return existingId;
-}
-
-async function resolveSiteId(
-  tx: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0],
-  formData: FormData,
-  customerId: string,
-): Promise<string | null> {
-  const newName = formData.get("newSiteName");
-  if (newName && String(newName).trim()) {
-    const [created] = await tx
-      .insert(sites)
-      .values({
-        customerId,
-        name: String(newName).trim(),
-        addressLine1: (formData.get("newSiteAddressLine1") as string) || null,
-        city: (formData.get("newSiteCity") as string) || null,
-        postalCode: (formData.get("newSitePostalCode") as string) || null,
-      })
-      .returning();
-    if (!created) throw new ConflictError("Could not create the new site.");
-    return created.id;
-  }
-
-  const existingId = formData.get("siteId");
-  return typeof existingId === "string" && existingId ? existingId : null;
 }
 
 export async function toggleChecklistItemAction(

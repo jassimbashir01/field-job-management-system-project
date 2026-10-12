@@ -64,3 +64,30 @@ export async function getActivityLog(
     )
     .orderBy(desc(activityLogEntries.createdAt));
 }
+
+export async function logPublicActivity({
+  entityType,
+  entityId,
+  action,
+  summary,
+  metadata,
+  tx,
+}: {
+  entityType: string;
+  entityId: string;
+  action: string;
+  summary: string;
+  metadata?: Record<string, unknown>;
+  tx?: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
+}): Promise<void> {
+  const db = tx ?? getDb();
+  await db.insert(activityLogEntries).values({
+    entityType,
+    entityId,
+    action,
+    actorUserId: null,
+    actorDisplayName: "Customer (via public link)",
+    summary,
+    metadata: metadata ?? null,
+  });
+}

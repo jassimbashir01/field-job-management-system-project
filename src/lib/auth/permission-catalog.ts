@@ -12,6 +12,7 @@ export const RESOURCES: ResourceConfig[] = [
   { key: "equipment", label: "Equipment", maxLevel: "delete" },
   { key: "jobs", label: "Jobs", maxLevel: "delete" },
   { key: "recurring_jobs", label: "Recurring Jobs", maxLevel: "delete" },
+  { key: "quotes", label: "Quotes", maxLevel: "delete" },
   { key: "team", label: "Team (view + reset passwords)", maxLevel: "write" },
 ];
 
@@ -57,6 +58,9 @@ export const PERMISSIONS = {
   RECURRING_JOBS_DELETE: permissionKey("recurring_jobs", "delete"),
   TEAM_READ: permissionKey("team", "read"),
   TEAM_WRITE: permissionKey("team", "write"),
+  QUOTES_READ: permissionKey("quotes", "read"),
+  QUOTES_WRITE: permissionKey("quotes", "write"),
+  QUOTES_DELETE: permissionKey("quotes", "delete"),
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

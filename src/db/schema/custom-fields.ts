@@ -15,6 +15,7 @@ export const customFieldEntityTypeEnum = pgEnum("custom_field_entity_type", [
   "site",
   "equipment",
   "job",
+  "quote",
 ]);
 
 export const customFieldTypeEnum = pgEnum("custom_field_type", [

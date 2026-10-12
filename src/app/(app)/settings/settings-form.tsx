@@ -201,6 +201,20 @@ function SettingsFields({
           defaultValue={company.defaultTeamMemberLabel}
         />
       </div>
+      <div className="space-y-2">
+        <Label htmlFor="currency">Currency</Label>
+        <Input
+          id="currency"
+          name="currency"
+          defaultValue={company.currency}
+          maxLength={3}
+          className="w-24 uppercase"
+          required
+        />
+        <p className="text-xs text-muted-foreground">
+          3-letter code (USD, GBP, EUR, …). Applies to quotes and invoices.
+        </p>
+      </div>
     </>
   );
 }

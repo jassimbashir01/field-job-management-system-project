@@ -17,7 +17,7 @@ import type {
 import type { CustomFieldValue } from "@/lib/custom-fields";
 import type { JobTemplateWithDetails } from "@/lib/job-templates";
 import { createJobAction, updateJobAction, type FormState } from "./actions";
-import { CustomerAndSitePickers } from "./customer-site-pickers";
+import { CustomerAndSitePickers } from "@/components/shared/customer-site-pickers";
 
 const initialState: FormState = { success: false, error: null };
 

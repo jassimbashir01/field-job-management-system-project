@@ -14,6 +14,7 @@ export const companies = pgTable("companies", {
   postalCode: text(),
   country: text(),
   timezone: text().notNull().default("UTC"),
+  currency: text().notNull().default("USD"),
   defaultTeamMemberLabel: text().notNull().default("Team Member"),
   developerCreditText: text(),
   developerCreditUrl: text(),

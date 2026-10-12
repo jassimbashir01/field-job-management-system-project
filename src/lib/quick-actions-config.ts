@@ -17,4 +17,5 @@ export const QUICK_ACTIONS: QuickActionConfig[] = [
     href: "/equipment/new",
     resourceKey: "equipment",
   },
+  { label: "Create Quote", href: "/quotes/new", resourceKey: "quotes" },
 ];

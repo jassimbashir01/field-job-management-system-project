@@ -14,6 +14,7 @@ import { customers } from "./customers";
 import { jobRecurrences } from "./job-recurrences";
 import { sites } from "./sites";
 import { users } from "./users";
+import { quotes } from "./quotes";
 
 export const jobStatusEnum = pgEnum("job_status", [
   "draft",
@@ -56,6 +57,9 @@ export const jobs = pgTable(
       onDelete: "set null",
     }),
     recurrenceId: uuid().references(() => jobRecurrences.id, {
+      onDelete: "set null",
+    }),
+    createdFromQuoteId: uuid().references(() => quotes.id, {
       onDelete: "set null",
     }),
     occurrenceDate: date({ mode: "string" }),

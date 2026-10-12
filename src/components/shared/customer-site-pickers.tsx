@@ -16,19 +16,22 @@ export function CustomerAndSitePickers({
   sites,
   defaultCustomerId,
   defaultSiteId,
+  defaultOneOffLocation,
   disabled,
 }: {
   customers: Customer[];
   sites: Site[];
   defaultCustomerId?: string;
   defaultSiteId?: string;
+  defaultOneOffLocation?: string | null;
   disabled?: boolean;
 }) {
   const [customerSelection, setCustomerSelection] = useState(
     defaultCustomerId ?? "",
   );
-  const [siteSelection, setSiteSelection] = useState(defaultSiteId ?? "");
-  const [oneOffLocationValue, setOneOffLocationValue] = useState("");
+  const [siteSelection, setSiteSelection] = useState(
+    defaultSiteId ?? (defaultOneOffLocation ? ONE_OFF : ""),
+  );
   const isNewCustomer = customerSelection === NEW;
   const isNewSite = siteSelection === NEW;
   const isOneOff = siteSelection === ONE_OFF;
@@ -49,7 +52,6 @@ export function CustomerAndSitePickers({
           onChange={(e) => {
             setCustomerSelection(e.target.value);
             setSiteSelection("");
-            setOneOffLocationValue("");
           }}
           className="w-full rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
           required
@@ -104,7 +106,7 @@ export function CustomerAndSitePickers({
           className="w-full rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
         >
           <option value="">No site yet</option>
-          <option value={ONE_OFF}>One-time location</option>
+          <option value={ONE_OFF}>One-time location (not saved)</option>
           <option value={NEW}>+ Add new site</option>
           {availableSites.map((site) => (
             <option key={site.id} value={site.id}>
@@ -121,8 +123,7 @@ export function CustomerAndSitePickers({
           <Input
             name="oneOffLocation"
             placeholder="Where is this job? (e.g. 123 Main St, Springfield)"
-            value={oneOffLocationValue}
-            onChange={(e) => setOneOffLocationValue(e.target.value)}
+            defaultValue={defaultOneOffLocation ?? ""}
             disabled={disabled}
           />
         )}
