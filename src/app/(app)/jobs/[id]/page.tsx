@@ -28,6 +28,7 @@ import { StatusTransitions } from "./status-transitions";
 import { JobFilesSection } from "./job-files-section";
 import { CreateFollowUpButton } from "./create-follow-up-button";
 import { isUuid } from "@/lib/uuid";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export default async function JobDetailPage({
 
   const { id } = await params;
   if (!isUuid(id)) notFound();
+  const invoiceAccess = await getResourceAccess(viewer, "invoices");
   const db = getDb();
   const rows = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
   const job = rows[0];
@@ -233,7 +235,22 @@ export default async function JobDetailPage({
         disabled={!access.canWrite}
       />
 
-      {access.canWrite && <CreateFollowUpButton jobId={job.id} />}
+      {(access.canWrite || invoiceAccess.canWrite) && (
+        <div className="flex flex-wrap gap-2">
+          {access.canWrite && <CreateFollowUpButton jobId={job.id} />}
+          {invoiceAccess.canWrite && (
+            <Button
+              variant="outline"
+              render={
+                <Link href={`/invoices/new?jobId=${job.id}`}>
+                  Create invoice
+                </Link>
+              }
+              nativeButton={false}
+            />
+          )}
+        </div>
+      )}
 
       <div className="mt-8 border-t pt-6">
         <h2 className="mb-4 text-sm font-semibold">Activity</h2>

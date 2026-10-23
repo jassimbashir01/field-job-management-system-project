@@ -21,6 +21,8 @@ import { QuoteStatusActions } from "./quote-status-actions";
 import { QuoteDeleteSection } from "./delete-section";
 import { QuoteStatusBadge } from "@/components/shared/quote-status-badge";
 import { isUuid } from "@/lib/uuid";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +36,7 @@ export default async function QuoteDetailPage({
   const access = await getResourceAccess(viewer, "quotes");
   if (!access.canRead) return <ForbiddenMessage />;
   if (!isUuid(id)) notFound();
-
+  const invoiceAccess = await getResourceAccess(viewer, "invoices");
   const db = getDb();
   const [quote] = await db
     .select()
@@ -82,7 +84,19 @@ export default async function QuoteDetailPage({
       <p className="text-lg font-medium">
         Total: {formatCents(totalCents, company?.currency ?? "USD")}
       </p>
-
+      {quote.status === "accepted" && invoiceAccess.canWrite && (
+        <div>
+          <Button
+            variant="outline"
+            render={
+              <Link href={`/invoices/new?quoteId=${quote.id}`}>
+                Create invoice from this quote
+              </Link>
+            }
+            nativeButton={false}
+          />
+        </div>
+      )}
       <QuoteStatusActions quote={quote} canWrite={access.canWrite} />
 
       <QuoteForm
