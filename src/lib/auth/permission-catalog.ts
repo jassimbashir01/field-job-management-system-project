@@ -14,6 +14,7 @@ export const RESOURCES: ResourceConfig[] = [
   { key: "recurring_jobs", label: "Recurring Jobs", maxLevel: "delete" },
   { key: "quotes", label: "Quotes", maxLevel: "delete" },
   { key: "team", label: "Team (view + reset passwords)", maxLevel: "write" },
+  { key: "invoices", label: "Invoices", maxLevel: "delete" },
 ];
 
 const LEVEL_ORDER: AccessLevel[] = ["read", "write", "delete"];
@@ -61,6 +62,9 @@ export const PERMISSIONS = {
   QUOTES_READ: permissionKey("quotes", "read"),
   QUOTES_WRITE: permissionKey("quotes", "write"),
   QUOTES_DELETE: permissionKey("quotes", "delete"),
+  INVOICES_READ: permissionKey("invoices", "read"),
+  INVOICES_WRITE: permissionKey("invoices", "write"),
+  INVOICES_DELETE: permissionKey("invoices", "delete"),
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

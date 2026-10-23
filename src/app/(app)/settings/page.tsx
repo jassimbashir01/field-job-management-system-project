@@ -38,10 +38,17 @@ export default async function SettingsPage() {
 
       <div className="mt-10 border-t pt-6">
         <h2 className="text-sm font-semibold">More settings</h2>
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <Button
             variant="outline"
             render={<Link href="/settings/custom-fields">Custom fields</Link>}
+            nativeButton={false}
+          />
+          <Button
+            variant="outline"
+            render={
+              <Link href="/settings/payment-options">Payment options</Link>
+            }
             nativeButton={false}
           />
           <Button

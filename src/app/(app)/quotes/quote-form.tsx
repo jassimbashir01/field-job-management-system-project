@@ -21,7 +21,10 @@ import {
   updateQuoteAction,
   type FormState,
 } from "./actions";
-import { LineItemsInput, type LineItemRow } from "./line-items-input";
+import {
+  LineItemsInput,
+  type LineItemRow,
+} from "@/components/shared/line-items-input";
 
 type Definition = typeof customFieldDefinitions.$inferSelect;
 type Customer = typeof customers.$inferSelect;

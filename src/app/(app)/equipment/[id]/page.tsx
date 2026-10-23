@@ -12,6 +12,7 @@ import { JobStatusBadge } from "@/components/shared/job-status-badge";
 import { ActivityTimeline } from "@/components/shared/activity-timeline";
 import { EquipmentForm } from "../equipment-form";
 import { EquipmentDeleteSection } from "./delete-section";
+import { isUuid } from "@/lib/uuid";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function EquipmentDetailPage({
   }
 
   const { id } = await params;
-
+  if (!isUuid(id)) notFound();
   const db = getDb();
   const rows = await db
     .select()

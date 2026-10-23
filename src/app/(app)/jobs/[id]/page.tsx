@@ -27,6 +27,7 @@ import { JobDeleteSection } from "./delete-section";
 import { StatusTransitions } from "./status-transitions";
 import { JobFilesSection } from "./job-files-section";
 import { CreateFollowUpButton } from "./create-follow-up-button";
+import { isUuid } from "@/lib/uuid";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function JobDetailPage({
   }
 
   const { id } = await params;
-
+  if (!isUuid(id)) notFound();
   const db = getDb();
   const rows = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
   const job = rows[0];

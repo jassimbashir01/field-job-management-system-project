@@ -11,6 +11,7 @@ import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { JobStatusBadge } from "@/components/shared/job-status-badge";
 import { CustomerForm } from "../customer-form";
 import { ContactsSection, CustomerDeleteSection } from "./contacts-and-delete";
+import { isUuid } from "@/lib/uuid";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function CustomerDetailPage({
   }
 
   const { id } = await params;
-
+  if (!isUuid(id)) notFound();
   const db = getDb();
   const rows = await db
     .select()

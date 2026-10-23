@@ -9,6 +9,7 @@ import {
   Users,
   Wrench,
   FileText,
+  Receipt,
 } from "lucide-react";
 
 export interface NavItem {
@@ -30,6 +31,12 @@ export const NAV_ITEMS: NavItem[] = [
   },
 
   { label: "Quotes", href: "/quotes", icon: FileText, resourceKey: "quotes" },
+  {
+    label: "Invoices",
+    href: "/invoices",
+    icon: Receipt,
+    resourceKey: "invoices",
+  },
   {
     label: "Customers",
     href: "/customers",

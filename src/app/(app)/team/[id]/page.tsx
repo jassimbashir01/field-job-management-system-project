@@ -11,6 +11,7 @@ import {
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { EditUserForm } from "./edit-user-form";
 import { PasswordResetSection } from "./password-reset-section";
+import { isUuid } from "@/lib/uuid";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export default async function EditTeamMemberPage({
 }) {
   const viewer = await requireUser();
   const { id } = await params;
-
+  if (!isUuid(id)) notFound();
   const db = getDb();
   const rows = await db
     .select({
