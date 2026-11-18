@@ -57,7 +57,8 @@ export default async function SchedulePage({
       .from(jobs)
       .innerJoin(customers, eq(jobs.customerId, customers.id))
       .leftJoin(sites, eq(jobs.siteId, sites.id))
-      .where(inArray(jobs.scheduledDate, weekDates)),
+      .where(inArray(jobs.scheduledDate, weekDates))
+      .orderBy(asc(jobs.scheduledTime), asc(jobs.jobNumber)),
   ]);
 
   const unassignedJobs = weekJobs.filter((job) => !job.assignedToUserId);

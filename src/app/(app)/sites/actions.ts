@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { count, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import * as z from "zod";
 import { getDb } from "@/db";
-import { customFieldValues, equipment, jobs, sites } from "@/db/schema";
+import { customFieldValues, equipment, sites } from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/auth/permission-catalog";
 import {
@@ -14,6 +14,7 @@ import {
   type CustomFieldValue,
 } from "@/lib/custom-fields";
 import { ConflictError, toSafeError, type SafeError } from "@/lib/errors";
+import { getSiteDependents } from "@/lib/dependents";
 
 const siteSchema = z.object({
   customerId: z.uuid(),
@@ -148,9 +149,6 @@ export async function updateSiteAction(
     }
 
     const db = getDb();
-    // customerId is deliberately absent here — it's locked at creation
-    // (Section 15.9's decision). The form no longer submits it for an
-    // edit, and even if it did, this action wouldn't act on it.
     await db
       .update(sites)
       .set({
@@ -184,16 +182,11 @@ export async function deleteSiteAction(siteId: string): Promise<FormState> {
     await requirePermission(PERMISSIONS.SITES_DELETE);
 
     const db = getDb();
-    const [jobCountRow] = await db
-      .select({ value: count() })
-      .from(jobs)
-      .where(eq(jobs.siteId, siteId));
-    const jobCount = Number(jobCountRow?.value ?? 0);
-
-    if (jobCount > 0) {
+    const dependents = await getSiteDependents(siteId);
+    if (dependents.total > 0) {
       throw new ConflictError(
-        `Can't delete this site — ${jobCount} job${jobCount === 1 ? "" : "s"} ` +
-          `still reference${jobCount === 1 ? "s" : ""} it. Delete or reassign those jobs first.`,
+        `Can't delete this site yet — ${dependents.summary} ` +
+          `${dependents.total === 1 ? "is" : "are"} still linked to it. Delete or reassign those first.`,
       );
     }
 

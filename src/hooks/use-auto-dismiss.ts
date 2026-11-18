@@ -2,20 +2,29 @@
 
 import { useEffect, useState } from "react";
 
+const ERROR_DURATION_MS = 12000;
+
 export function useAutoDismiss(
   trigger: unknown,
   show: boolean,
   durationMs = 4000,
 ): boolean {
-  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState<{ value: unknown } | null>(null);
+
+  const isError =
+    typeof trigger === "object" &&
+    trigger !== null &&
+    "error" in trigger &&
+    Boolean((trigger as { error?: unknown }).error);
+  const visibleMs = isError
+    ? Math.max(durationMs, ERROR_DURATION_MS)
+    : durationMs;
 
   useEffect(() => {
     if (!show) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setVisible(true);
-    const timer = setTimeout(() => setVisible(false), durationMs);
+    const timer = setTimeout(() => setDismissed({ value: trigger }), visibleMs);
     return () => clearTimeout(timer);
-  }, [trigger, show, durationMs]);
+  }, [trigger, show, visibleMs]);
 
-  return visible;
+  return show && !(dismissed !== null && Object.is(dismissed.value, trigger));
 }

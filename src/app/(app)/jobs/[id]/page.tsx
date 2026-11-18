@@ -12,6 +12,8 @@ import {
   equipment,
   jobEquipment,
   jobFiles,
+  invoices,
+  quotes,
 } from "@/db/schema";
 import { JobEquipmentSection } from "./job-equipment-section";
 import { requireUser } from "@/lib/auth/guards";
@@ -29,6 +31,14 @@ import { JobFilesSection } from "./job-files-section";
 import { CreateFollowUpButton } from "./create-follow-up-button";
 import { isUuid } from "@/lib/uuid";
 import { Button } from "@/components/ui/button";
+import { InvoiceStatusBadge } from "@/components/shared/invoice-status-badge";
+import {
+  RelatedDocuments,
+  type RelatedItem,
+} from "@/components/shared/related-documents";
+import { getCompanyCurrency, getInvoiceTotals } from "@/lib/document-totals";
+import { isInvoiceOverdue } from "@/lib/invoice-status";
+import { formatCents } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +55,10 @@ export default async function JobDetailPage({
 
   const { id } = await params;
   if (!isUuid(id)) notFound();
-  const invoiceAccess = await getResourceAccess(viewer, "invoices");
+  const [invoiceAccess, quoteAccess] = await Promise.all([
+    getResourceAccess(viewer, "invoices"),
+    getResourceAccess(viewer, "quotes"),
+  ]);
   const db = getDb();
   const rows = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
   const job = rows[0];
@@ -95,7 +108,8 @@ export default async function JobDetailPage({
       })
       .from(jobEquipment)
       .innerJoin(equipment, eq(jobEquipment.equipmentId, equipment.id))
-      .where(eq(jobEquipment.jobId, job.id)),
+      .where(eq(jobEquipment.jobId, job.id))
+      .orderBy(asc(equipment.name)),
     job.siteId
       ? db
           .select({ id: equipment.id, name: equipment.name })
@@ -143,6 +157,46 @@ export default async function JobDetailPage({
     .where(eq(jobFiles.jobId, job.id))
     .orderBy(desc(jobFiles.createdAt));
 
+  const jobInvoices = invoiceAccess.canRead
+    ? await db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          title: invoices.title,
+          status: invoices.status,
+          dueDate: invoices.dueDate,
+        })
+        .from(invoices)
+        .where(eq(invoices.jobId, job.id))
+        .orderBy(desc(invoices.createdAt))
+    : [];
+  const [invoiceTotals, currency] = await Promise.all([
+    getInvoiceTotals(jobInvoices.map((i) => i.id)),
+    getCompanyCurrency(),
+  ]);
+  const invoiceItems: RelatedItem[] = jobInvoices.map((i) => ({
+    id: i.id,
+    href: `/invoices/${i.id}`,
+    label: `#${i.invoiceNumber} — ${i.title}`,
+    sublabel: i.dueDate ? `Due ${i.dueDate}` : undefined,
+    badge: (
+      <InvoiceStatusBadge status={i.status} overdue={isInvoiceOverdue(i)} />
+    ),
+    amount: formatCents(invoiceTotals.get(i.id) ?? 0, currency),
+  }));
+  const [sourceQuote] =
+    job.createdFromQuoteId && quoteAccess.canRead
+      ? await db
+          .select({
+            id: quotes.id,
+            quoteNumber: quotes.quoteNumber,
+            title: quotes.title,
+          })
+          .from(quotes)
+          .where(eq(quotes.id, job.createdFromQuoteId))
+          .limit(1)
+      : [];
+
   return (
     <div className="max-w-lg space-y-10">
       <div>
@@ -158,7 +212,14 @@ export default async function JobDetailPage({
           </p>
         )}
       </div>
-
+      {sourceQuote && (
+        <p className="text-sm text-muted-foreground">
+          Created from{" "}
+          <Link href={`/quotes/${sourceQuote.id}`} className="underline">
+            quote #{sourceQuote.quoteNumber} — {sourceQuote.title}
+          </Link>
+        </p>
+      )}
       {(followUpSource[0] || recurrence[0] || followUps.length > 0) && (
         <div className="space-y-1 text-sm text-muted-foreground">
           {followUpSource[0] && (
@@ -253,6 +314,13 @@ export default async function JobDetailPage({
       )}
 
       <div className="mt-8 border-t pt-6">
+        {invoiceAccess.canRead && (
+          <RelatedDocuments
+            title="Invoices for this job"
+            items={invoiceItems}
+            emptyText="No invoices for this job yet."
+          />
+        )}
         <h2 className="mb-4 text-sm font-semibold">Activity</h2>
         <ActivityTimeline entries={activityLog} />
       </div>

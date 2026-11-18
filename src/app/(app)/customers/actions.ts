@@ -2,14 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { count, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import * as z from "zod";
 import { getDb } from "@/db";
 import {
   customFieldValues,
   customerContacts,
   customers,
-  jobs,
   sites,
 } from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
@@ -20,9 +19,11 @@ import {
   type CustomFieldValue,
 } from "@/lib/custom-fields";
 import { ConflictError, toSafeError, type SafeError } from "@/lib/errors";
+import { assertCustomerNameAvailable } from "@/lib/customer-name";
+import { getCustomerDependents } from "@/lib/dependents";
 
 const customerSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().trim().min(1, "Name is required"),
   companyName: z.string().optional(),
   phone: z.string().optional(),
   email: z.union([z.email(), z.literal("")]).optional(),
@@ -99,6 +100,7 @@ export async function createCustomerAction(
       };
     }
 
+    await assertCustomerNameAvailable(parsed.data.name);
     const db = getDb();
     const [created] = await db
       .insert(customers)
@@ -149,6 +151,7 @@ export async function updateCustomerAction(
       };
     }
 
+    await assertCustomerNameAvailable(parsed.data.name, customerId);
     const db = getDb();
     await db
       .update(customers)
@@ -182,16 +185,11 @@ export async function deleteCustomerAction(
     await requirePermission(PERMISSIONS.CUSTOMERS_DELETE);
 
     const db = getDb();
-    const [jobCountRow] = await db
-      .select({ value: count() })
-      .from(jobs)
-      .where(eq(jobs.customerId, customerId));
-    const jobCount = Number(jobCountRow?.value ?? 0);
-
-    if (jobCount > 0) {
+    const dependents = await getCustomerDependents(customerId);
+    if (dependents.total > 0) {
       throw new ConflictError(
-        `Can't delete this customer — ${jobCount} job${jobCount === 1 ? "" : "s"} ` +
-          `still reference${jobCount === 1 ? "s" : ""} them. Delete or reassign those jobs first.`,
+        `Can't delete this customer yet — ${dependents.summary} ` +
+          `${dependents.total === 1 ? "is" : "are"} still linked to them. Delete or reassign those first.`,
       );
     }
 

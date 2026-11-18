@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   customers,
@@ -21,36 +21,39 @@ export const dynamic = "force-dynamic";
 export default async function NewInvoicePage({
   searchParams,
 }: {
-  searchParams: Promise<{ jobId?: string; quoteId?: string }>;
+  searchParams: Promise<{
+    jobId?: string;
+    quoteId?: string;
+    customerId?: string;
+    siteId?: string;
+  }>;
 }) {
   const viewer = await requireUser();
   const access = await getResourceAccess(viewer, "invoices");
   if (!access.canWrite) return <ForbiddenMessage />;
 
-  const { jobId, quoteId } = await searchParams;
+  const { jobId, quoteId, customerId, siteId } = await searchParams;
   const db = getDb();
+  const jobAccess = await getResourceAccess(viewer, "jobs");
 
   let defaults: InvoiceDefaults | undefined;
   let lineItemRows: LineItemRow[] = [];
   const source: { jobId?: string; quoteId?: string } = {};
 
-  if (jobId && isUuid(jobId)) {
-    const jobAccess = await getResourceAccess(viewer, "jobs");
-    if (jobAccess.canRead) {
-      const [job] = await db
-        .select()
-        .from(jobs)
-        .where(eq(jobs.id, jobId))
-        .limit(1);
-      if (job) {
-        source.jobId = job.id;
-        defaults = {
-          title: job.title,
-          customerId: job.customerId,
-          siteId: job.siteId,
-          oneOffLocation: job.oneOffLocation,
-        };
-      }
+  if (jobId && isUuid(jobId) && jobAccess.canRead) {
+    const [job] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, jobId))
+      .limit(1);
+    if (job) {
+      source.jobId = job.id;
+      defaults = {
+        title: job.title,
+        customerId: job.customerId,
+        siteId: job.siteId,
+        oneOffLocation: job.oneOffLocation,
+      };
     }
   }
 
@@ -82,19 +85,38 @@ export default async function NewInvoicePage({
           quantity: item.quantity,
           unitPrice: (item.unitPriceCents / 100).toFixed(2),
         }));
+
+        if (!source.jobId && jobAccess.canRead) {
+          const [createdJob] = await db
+            .select({ id: jobs.id })
+            .from(jobs)
+            .where(eq(jobs.createdFromQuoteId, quote.id))
+            .limit(1);
+          if (createdJob) source.jobId = createdJob.id;
+        }
       }
     }
   }
 
   const [customerRows, siteRows, definitions, optionRows] = await Promise.all([
-    db.select().from(customers),
-    db.select().from(sites),
+    db.select().from(customers).orderBy(asc(customers.name)),
+    db.select().from(sites).orderBy(asc(sites.name)),
     getFieldDefinitions("invoice"),
     db
       .select()
       .from(paymentOptions)
       .orderBy(paymentOptions.sortOrder, paymentOptions.createdAt),
   ]);
+
+  if (!defaults && customerId) {
+    const customer = customerRows.find((c) => c.id === customerId);
+    if (customer) {
+      const site = siteId
+        ? siteRows.find((s) => s.id === siteId && s.customerId === customer.id)
+        : undefined;
+      defaults = { customerId: customer.id, siteId: site?.id ?? null };
+    }
+  }
 
   return (
     <div className="max-w-2xl">

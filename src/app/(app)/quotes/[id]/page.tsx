@@ -1,28 +1,37 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   companies,
   customers,
+  invoices,
+  jobs,
   quoteLineItems,
   quotes,
   sites,
 } from "@/db/schema";
+import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { ActivityTimeline } from "@/components/shared/activity-timeline";
+import { InvoiceStatusBadge } from "@/components/shared/invoice-status-badge";
+import { QuoteStatusBadge } from "@/components/shared/quote-status-badge";
+import {
+  RelatedDocuments,
+  type RelatedItem,
+} from "@/components/shared/related-documents";
 import { getActivityLog } from "@/lib/activity-log";
 import { getFieldDefinitions, getFieldValues } from "@/lib/custom-fields";
+import { getInvoiceTotals } from "@/lib/document-totals";
+import { isInvoiceOverdue } from "@/lib/invoice-status";
 import { computeTotalCents, formatCents } from "@/lib/money";
 import { isQuoteExpired } from "@/lib/quote-status";
+import { isUuid } from "@/lib/uuid";
 import { QuoteForm } from "../quote-form";
 import { QuoteStatusActions } from "./quote-status-actions";
 import { QuoteDeleteSection } from "./delete-section";
-import { QuoteStatusBadge } from "@/components/shared/quote-status-badge";
-import { isUuid } from "@/lib/uuid";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +45,9 @@ export default async function QuoteDetailPage({
   const access = await getResourceAccess(viewer, "quotes");
   if (!access.canRead) return <ForbiddenMessage />;
   if (!isUuid(id)) notFound();
+
   const invoiceAccess = await getResourceAccess(viewer, "invoices");
+
   const db = getDb();
   const [quote] = await db
     .select()
@@ -52,20 +63,58 @@ export default async function QuoteDetailPage({
     definitions,
     activityLog,
     companyRows,
+    createdJobRows,
   ] = await Promise.all([
     db
       .select()
       .from(quoteLineItems)
       .where(eq(quoteLineItems.quoteId, id))
       .orderBy(quoteLineItems.sortOrder),
-    db.select().from(customers),
-    db.select().from(sites),
+    db.select().from(customers).orderBy(asc(customers.name)),
+    db.select().from(sites).orderBy(asc(sites.name)),
     getFieldDefinitions("quote"),
     getActivityLog("quote", id),
     db.select({ currency: companies.currency }).from(companies).limit(1),
+    db
+      .select({ id: jobs.id, jobNumber: jobs.jobNumber })
+      .from(jobs)
+      .where(eq(jobs.createdFromQuoteId, id))
+      .limit(1),
   ]);
   const customFieldValues = await getFieldValues(id);
   const company = companyRows[0];
+  const createdJob = createdJobRows[0];
+  const currency = company?.currency ?? "USD";
+
+  const quoteInvoices = invoiceAccess.canRead
+    ? await db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          title: invoices.title,
+          status: invoices.status,
+          dueDate: invoices.dueDate,
+        })
+        .from(invoices)
+        .where(eq(invoices.quoteId, id))
+        .orderBy(desc(invoices.createdAt))
+    : [];
+  const invoiceTotals = await getInvoiceTotals(quoteInvoices.map((i) => i.id));
+  const invoiceItems: RelatedItem[] = quoteInvoices.map((i) => ({
+    id: i.id,
+    href: `/invoices/${i.id}`,
+    label: `#${i.invoiceNumber} — ${i.title}`,
+    sublabel: i.dueDate ? `Due ${i.dueDate}` : undefined,
+    badge: (
+      <InvoiceStatusBadge status={i.status} overdue={isInvoiceOverdue(i)} />
+    ),
+    amount: formatCents(invoiceTotals.get(i.id) ?? 0, currency),
+  }));
+
+  const quoteCustomer = customerRows.find((c) => c.id === quote.customerId);
+  const quoteSite = quote.siteId
+    ? siteRows.find((s) => s.id === quote.siteId)
+    : undefined;
 
   const totalCents = computeTotalCents(lineItems);
 
@@ -82,8 +131,36 @@ export default async function QuoteDetailPage({
       </div>
 
       <p className="text-lg font-medium">
-        Total: {formatCents(totalCents, company?.currency ?? "USD")}
+        Total: {formatCents(totalCents, currency)}
       </p>
+
+      {quoteCustomer && (
+        <p className="text-sm">
+          For{" "}
+          <Link href={`/customers/${quoteCustomer.id}`} className="underline">
+            {quoteCustomer.name}
+          </Link>
+          {quoteSite && (
+            <>
+              {" · "}
+              <Link href={`/sites/${quoteSite.id}`} className="underline">
+                {quoteSite.name}
+              </Link>
+            </>
+          )}
+          {!quoteSite && quote.oneOffLocation && ` · ${quote.oneOffLocation}`}
+        </p>
+      )}
+
+      {createdJob && (
+        <p className="text-sm">
+          <Link href={`/jobs/${createdJob.id}`} className="underline">
+            View job #{createdJob.jobNumber}
+          </Link>{" "}
+          (created when this quote was accepted)
+        </p>
+      )}
+
       {quote.status === "accepted" && invoiceAccess.canWrite && (
         <div>
           <Button
@@ -97,6 +174,7 @@ export default async function QuoteDetailPage({
           />
         </div>
       )}
+
       <QuoteStatusActions quote={quote} canWrite={access.canWrite} />
 
       <QuoteForm
@@ -112,6 +190,14 @@ export default async function QuoteDetailPage({
           unitPrice: (item.unitPriceCents / 100).toFixed(2),
         }))}
       />
+
+      {invoiceAccess.canRead && (
+        <RelatedDocuments
+          title="Invoices from this quote"
+          items={invoiceItems}
+          emptyText="No invoices from this quote yet."
+        />
+      )}
 
       <ActivityTimeline entries={activityLog} />
 

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/db";
 import { jobRecurrences, jobs } from "@/db/schema";
 import { logActivity } from "@/lib/activity-log";
@@ -137,7 +137,8 @@ export async function ensureRecurringJobsGenerated(
   const activeRecurrences = await db
     .select()
     .from(jobRecurrences)
-    .where(eq(jobRecurrences.active, true));
+    .where(eq(jobRecurrences.active, true))
+    .orderBy(asc(jobRecurrences.createdAt));
 
   for (const recurrence of activeRecurrences) {
     await generateDueOccurrences(recurrence, today, actor);

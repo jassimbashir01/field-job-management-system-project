@@ -8,6 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CustomFieldInput } from "@/components/shared/custom-field-input";
 import { CustomerAndSitePickers } from "@/components/shared/customer-site-pickers";
+import {
+  LineItemsInput,
+  type LineItemRow,
+} from "@/components/shared/line-items-input";
 import { useAutoDismiss } from "@/hooks/use-auto-dismiss";
 import type {
   customers,
@@ -21,19 +25,21 @@ import {
   updateQuoteAction,
   type FormState,
 } from "./actions";
-import {
-  LineItemsInput,
-  type LineItemRow,
-} from "@/components/shared/line-items-input";
 
 type Definition = typeof customFieldDefinitions.$inferSelect;
 type Customer = typeof customers.$inferSelect;
 type Site = typeof sites.$inferSelect;
 
+export interface QuoteDefaults {
+  customerId?: string;
+  siteId?: string | null;
+}
+
 const initialState: FormState = { success: false, error: null };
 
 export function QuoteForm({
   quote,
+  defaults,
   customers,
   sites,
   definitions,
@@ -41,6 +47,7 @@ export function QuoteForm({
   lineItemRows,
 }: {
   quote?: typeof quotes.$inferSelect;
+  defaults?: QuoteDefaults;
   customers: Customer[];
   sites: Site[];
   definitions: Definition[];
@@ -68,6 +75,7 @@ export function QuoteForm({
       <QuoteFields
         key={quote?.updatedAt.toISOString() ?? "new"}
         quote={quote}
+        defaults={defaults}
         customers={customers}
         sites={sites}
         definitions={definitions}
@@ -94,7 +102,7 @@ export function QuoteForm({
       )}
       {readOnly && (
         <p className="text-sm text-muted-foreground">
-          This quote has been sent and can no longer be edited here — duplicate
+          This quote has been sent and can no longer be edited here - duplicate
           it below to make changes.
         </p>
       )}
@@ -104,6 +112,7 @@ export function QuoteForm({
 
 function QuoteFields({
   quote,
+  defaults,
   customers,
   sites,
   definitions,
@@ -112,6 +121,7 @@ function QuoteFields({
   readOnly,
 }: {
   quote?: typeof quotes.$inferSelect;
+  defaults?: QuoteDefaults;
   customers: Customer[];
   sites: Site[];
   definitions: Definition[];
@@ -135,8 +145,8 @@ function QuoteFields({
       <CustomerAndSitePickers
         customers={customers}
         sites={sites}
-        defaultCustomerId={quote?.customerId}
-        defaultSiteId={quote?.siteId ?? undefined}
+        defaultCustomerId={quote?.customerId ?? defaults?.customerId}
+        defaultSiteId={(quote ? quote.siteId : defaults?.siteId) ?? undefined}
         defaultOneOffLocation={quote?.oneOffLocation}
         disabled={readOnly}
       />

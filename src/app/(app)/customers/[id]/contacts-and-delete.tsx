@@ -156,13 +156,15 @@ export function ContactsSection({
 export function CustomerDeleteSection({
   customer,
   canDelete,
-  blockingJobs = [],
-  blockingJobsTotal = 0,
+  blockers,
+  blockersTotal,
+  blockersSummary,
 }: {
   customer: Customer;
   canDelete: boolean;
-  blockingJobs?: { id: string; jobNumber: number; title: string }[];
-  blockingJobsTotal?: number;
+  blockers: { href: string; label: string }[];
+  blockersTotal: number;
+  blockersSummary: string;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -171,32 +173,34 @@ export function CustomerDeleteSection({
 
   if (!canDelete) return null;
 
-  if (blockingJobs.length > 0) {
-    const remaining = blockingJobsTotal - blockingJobs.length;
+  if (blockersTotal > 0) {
+    const remaining = blockersTotal - blockers.length;
     return (
       <div className="space-y-2">
         <h2 className="text-sm font-semibold">Delete customer</h2>
         <p className="text-sm text-muted-foreground">
-          Can&apos;t delete this customer yet — {blockingJobsTotal} job
-          {blockingJobsTotal === 1 ? "" : "s"} still reference
-          {blockingJobsTotal === 1 ? "s" : ""} them:
+          Can&apos;t delete this customer yet — {blockersSummary}{" "}
+          {blockersTotal === 1 ? "is" : "are"} still linked to them:
         </p>
-        <ul className="space-y-1 text-sm">
-          {blockingJobs.map((job) => (
-            <li key={job.id}>
-              <Link href={`/jobs/${job.id}`} className="underline">
-                #{job.jobNumber} — {job.title}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {blockers.length > 0 && (
+          <ul className="space-y-1 text-sm">
+            {blockers.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className="underline">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
         {remaining > 0 && (
           <p className="text-xs text-muted-foreground">
-            …and {remaining} more.
+            …and {remaining} more
+            {blockers.length === 0 ? " you may not have access to see" : ""}.
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Delete or reassign these jobs first, then come back here.
+          Delete or reassign these first, then come back here.
         </p>
       </div>
     );
@@ -207,7 +211,7 @@ export function CustomerDeleteSection({
       <div>
         <h2 className="text-sm font-semibold">Delete customer</h2>
         <p className="mt-1 mb-2 text-xs text-muted-foreground">
-          Permanent — cannot be undone.
+          Permanent - cannot be undone.
         </p>
         <Button variant="destructive" onClick={() => setConfirming(true)}>
           Delete {customer.name}
@@ -220,7 +224,7 @@ export function CustomerDeleteSection({
     <div className="space-y-2">
       <h2 className="text-sm font-semibold">Delete customer</h2>
       <p className="text-xs text-muted-foreground">
-        Type <strong>{customer.name}</strong> to confirm — this is permanent,
+        Type <strong>{customer.name}</strong> to confirm - this is permanent,
         and also deletes their contacts and custom field values.
       </p>
       <Input

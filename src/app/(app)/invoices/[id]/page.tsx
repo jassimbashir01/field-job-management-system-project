@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   companies,
@@ -80,6 +80,8 @@ export default async function InvoiceDetailPage({
       .where(eq(invoicePaymentOptions.invoiceId, id)),
     getResourceAccess(viewer, "jobs"),
     getResourceAccess(viewer, "quotes"),
+    db.select().from(customers).orderBy(asc(customers.name)),
+    db.select().from(sites).orderBy(asc(sites.name)),
   ]);
   const customFieldValues = await getFieldValues(id);
   const currency = companyRows[0]?.currency ?? "USD";
@@ -102,6 +104,10 @@ export default async function InvoiceDetailPage({
       : [];
 
   const totalCents = computeTotalCents(lineItems);
+  const invoiceCustomer = customerRows.find((c) => c.id === invoice.customerId);
+  const invoiceSite = invoice.siteId
+    ? siteRows.find((s) => s.id === invoice.siteId)
+    : undefined;
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -124,7 +130,25 @@ export default async function InvoiceDetailPage({
           </span>
         )}
       </p>
-
+      {invoiceCustomer && (
+        <p className="text-sm">
+          For{" "}
+          <Link href={`/customers/${invoiceCustomer.id}`} className="underline">
+            {invoiceCustomer.name}
+          </Link>
+          {invoiceSite && (
+            <>
+              {" · "}
+              <Link href={`/sites/${invoiceSite.id}`} className="underline">
+                {invoiceSite.name}
+              </Link>
+            </>
+          )}
+          {!invoiceSite &&
+            invoice.oneOffLocation &&
+            ` · ${invoice.oneOffLocation}`}
+        </p>
+      )}
       {invoice.status === "payment_reported" && (
         <p className="rounded-md border border-amber-500/50 p-3 text-sm">
           The customer says they&apos;ve paid. Check your account, then mark the

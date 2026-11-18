@@ -1,17 +1,39 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { asc, count, desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { customerContacts, customers, jobs, sites } from "@/db/schema";
+import {
+  customerContacts,
+  customers,
+  invoices,
+  jobs,
+  quotes,
+  sites,
+} from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
 import { getFieldDefinitions, getFieldValues } from "@/lib/custom-fields";
+import { getCustomerDependents } from "@/lib/dependents";
+import {
+  getCompanyCurrency,
+  getInvoiceTotals,
+  getQuoteTotals,
+} from "@/lib/document-totals";
+import { isInvoiceOverdue } from "@/lib/invoice-status";
+import { formatCents } from "@/lib/money";
+import { isQuoteExpired } from "@/lib/quote-status";
+import { isUuid } from "@/lib/uuid";
 import { Button } from "@/components/ui/button";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
+import { InvoiceStatusBadge } from "@/components/shared/invoice-status-badge";
 import { JobStatusBadge } from "@/components/shared/job-status-badge";
+import { QuoteStatusBadge } from "@/components/shared/quote-status-badge";
+import {
+  RelatedDocuments,
+  type RelatedItem,
+} from "@/components/shared/related-documents";
 import { CustomerForm } from "../customer-form";
 import { ContactsSection, CustomerDeleteSection } from "./contacts-and-delete";
-import { isUuid } from "@/lib/uuid";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +50,7 @@ export default async function CustomerDetailPage({
 
   const { id } = await params;
   if (!isUuid(id)) notFound();
+
   const db = getDb();
   const rows = await db
     .select()
@@ -39,13 +62,21 @@ export default async function CustomerDetailPage({
     notFound();
   }
 
+  const [quoteAccess, invoiceAccess] = await Promise.all([
+    getResourceAccess(viewer, "quotes"),
+    getResourceAccess(viewer, "invoices"),
+  ]);
+
   const [
     definitions,
     fieldValues,
     contacts,
     customerSites,
     customerJobs,
-    [jobsCountRow],
+    customerQuotes,
+    customerInvoices,
+    dependents,
+    currency,
   ] = await Promise.all([
     getFieldDefinitions("customer"),
     getFieldValues(customer.id),
@@ -70,12 +101,75 @@ export default async function CustomerDetailPage({
       .where(eq(jobs.customerId, customer.id))
       .orderBy(desc(jobs.createdAt))
       .limit(10),
-    db
-      .select({ value: count() })
-      .from(jobs)
-      .where(eq(jobs.customerId, customer.id)),
+    quoteAccess.canRead
+      ? db
+          .select({
+            id: quotes.id,
+            quoteNumber: quotes.quoteNumber,
+            title: quotes.title,
+            status: quotes.status,
+            expiresAt: quotes.expiresAt,
+          })
+          .from(quotes)
+          .where(eq(quotes.customerId, customer.id))
+          .orderBy(desc(quotes.createdAt))
+          .limit(10)
+      : Promise.resolve([]),
+    invoiceAccess.canRead
+      ? db
+          .select({
+            id: invoices.id,
+            invoiceNumber: invoices.invoiceNumber,
+            title: invoices.title,
+            status: invoices.status,
+            dueDate: invoices.dueDate,
+          })
+          .from(invoices)
+          .where(eq(invoices.customerId, customer.id))
+          .orderBy(desc(invoices.createdAt))
+          .limit(10)
+      : Promise.resolve([]),
+    getCustomerDependents(customer.id),
+    getCompanyCurrency(),
   ]);
-  const jobsTotal = Number(jobsCountRow?.value ?? 0);
+
+  const [quoteTotals, invoiceTotals] = await Promise.all([
+    getQuoteTotals(customerQuotes.map((q) => q.id)),
+    getInvoiceTotals(customerInvoices.map((i) => i.id)),
+  ]);
+
+  const quoteItems: RelatedItem[] = customerQuotes.map((q) => ({
+    id: q.id,
+    href: `/quotes/${q.id}`,
+    label: `#${q.quoteNumber} — ${q.title}`,
+    badge: <QuoteStatusBadge status={q.status} expired={isQuoteExpired(q)} />,
+    amount: formatCents(quoteTotals.get(q.id) ?? 0, currency),
+  }));
+  const invoiceItems: RelatedItem[] = customerInvoices.map((i) => ({
+    id: i.id,
+    href: `/invoices/${i.id}`,
+    label: `#${i.invoiceNumber} — ${i.title}`,
+    sublabel: i.dueDate ? `Due ${i.dueDate}` : undefined,
+    badge: (
+      <InvoiceStatusBadge status={i.status} overdue={isInvoiceOverdue(i)} />
+    ),
+    amount: formatCents(invoiceTotals.get(i.id) ?? 0, currency),
+  }));
+
+  const blockers = [
+    ...customerJobs.map((j) => ({
+      href: `/jobs/${j.id}`,
+      label: `Job #${j.jobNumber} — ${j.title}`,
+    })),
+    ...customerQuotes.map((q) => ({
+      href: `/quotes/${q.id}`,
+      label: `Quote #${q.quoteNumber} — ${q.title}`,
+    })),
+    ...customerInvoices.map((i) => ({
+      href: `/invoices/${i.id}`,
+      label: `Invoice #${i.invoiceNumber} — ${i.title}`,
+    })),
+  ];
 
   return (
     <div className="max-w-lg space-y-10">
@@ -126,6 +220,34 @@ export default async function CustomerDetailPage({
         )}
       </div>
 
+      {quoteAccess.canRead && (
+        <RelatedDocuments
+          title="Quotes"
+          items={quoteItems}
+          emptyText="No quotes yet."
+          newHref={
+            quoteAccess.canWrite
+              ? `/quotes/new?customerId=${customer.id}`
+              : undefined
+          }
+          newLabel="New quote"
+        />
+      )}
+
+      {invoiceAccess.canRead && (
+        <RelatedDocuments
+          title="Invoices"
+          items={invoiceItems}
+          emptyText="No invoices yet."
+          newHref={
+            invoiceAccess.canWrite
+              ? `/invoices/new?customerId=${customer.id}`
+              : undefined
+          }
+          newLabel="New invoice"
+        />
+      )}
+
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Sites</h2>
@@ -173,8 +295,9 @@ export default async function CustomerDetailPage({
       <CustomerDeleteSection
         customer={customer}
         canDelete={access.canDelete}
-        blockingJobs={customerJobs}
-        blockingJobsTotal={jobsTotal}
+        blockers={blockers}
+        blockersTotal={dependents.total}
+        blockersSummary={dependents.summary}
       />
     </div>
   );

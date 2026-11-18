@@ -1,6 +1,7 @@
 import { type getDb } from "@/db";
 import { customers, sites } from "@/db/schema";
 import { ConflictError, ValidationError } from "@/lib/errors";
+import { assertCustomerNameAvailable } from "@/lib/customer-name";
 
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 
@@ -12,6 +13,7 @@ export async function resolveCustomerId(
 ): Promise<string> {
   const newName = formData.get("newCustomerName");
   if (newName && String(newName).trim()) {
+    await assertCustomerNameAvailable(String(newName));
     const [created] = await tx
       .insert(customers)
       .values({
