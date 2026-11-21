@@ -26,6 +26,7 @@ import { isUuid } from "@/lib/uuid";
 import { InvoiceForm } from "../invoice-form";
 import { InvoiceStatusActions } from "./invoice-status-actions";
 import { InvoiceDeleteSection } from "./delete-section";
+import { isEmailConfigured } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -174,7 +175,12 @@ export default async function InvoiceDetailPage({
         </p>
       )}
 
-      <InvoiceStatusActions invoice={invoice} canWrite={access.canWrite} />
+      <InvoiceStatusActions
+        invoice={invoice}
+        canWrite={access.canWrite}
+        customerEmail={invoiceCustomer?.email ?? null}
+        emailEnabled={isEmailConfigured()}
+      />
 
       <InvoiceForm
         invoice={invoice}

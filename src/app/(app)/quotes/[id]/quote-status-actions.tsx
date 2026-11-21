@@ -9,20 +9,30 @@ import {
   markQuoteSentAction,
   setQuoteResponseManuallyAction,
 } from "../actions";
+import { emailQuoteAction } from "../email-actions";
 
 type Notice = { kind: "success" | "error"; text: string };
+
+const SELECT_CLASS =
+  "border-input bg-background h-9 rounded-md border px-3 text-sm";
 
 export function QuoteStatusActions({
   quote,
   canWrite,
+  customerEmail,
+  emailEnabled,
 }: {
   quote: typeof quotes.$inferSelect;
   canWrite: boolean;
+  customerEmail: string | null;
+  emailEnabled: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [confirmingEmail, setConfirmingEmail] = useState(false);
+  const [emailMode, setEmailMode] = useState<"link" | "pdf">("link");
+  const [shared, setShared] = useState(false);
   const [justCopied, setJustCopied] = useState(false);
   const router = useRouter();
 
@@ -38,7 +48,23 @@ export function QuoteStatusActions({
     return () => clearTimeout(timer);
   }, [justCopied]);
 
-  if (!canWrite) return null;
+  const downloadButton = (
+    <Button
+      variant="outline"
+      nativeButton={false}
+      render={
+        <a
+          href={`/api/quotes/${quote.id}/pdf`}
+          download
+          onClick={() => setShared(true)}
+        >
+          Download PDF
+        </a>
+      }
+    />
+  );
+
+  if (!canWrite) return <div>{downloadButton}</div>;
 
   function run(
     name: string,
@@ -50,6 +76,7 @@ export function QuoteStatusActions({
     failureText: string,
   ) {
     setNotice(null);
+    setConfirmingEmail(false);
     setActiveAction(name);
     startTransition(async () => {
       const result = await action();
@@ -72,7 +99,7 @@ export function QuoteStatusActions({
       await navigator.clipboard.writeText(
         `${window.location.origin}/q/${quote.publicToken}`,
       );
-      setLinkCopied(true);
+      setShared(true);
       setJustCopied(true);
       setNotice({
         kind: "success",
@@ -91,6 +118,8 @@ export function QuoteStatusActions({
 
   const isDraft = quote.status === "draft";
   const canRespond = quote.status === "sent" || quote.status === "viewed";
+  const canEmail = isDraft || canRespond;
+  const emailReady = emailEnabled && Boolean(customerEmail);
   const busy = (name: string) => isPending && activeAction === name;
 
   return (
@@ -105,10 +134,27 @@ export function QuoteStatusActions({
           {justCopied ? "Copied ✓" : "Copy public link"}
         </Button>
 
+        {downloadButton}
+
+        {canEmail && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isPending || !emailReady}
+            onClick={() => setConfirmingEmail((open) => !open)}
+          >
+            {busy("email")
+              ? "Sending…"
+              : isDraft
+                ? "Email to customer…"
+                : "Email again…"}
+          </Button>
+        )}
+
         {isDraft && (
           <Button
             type="button"
-            disabled={isPending || !linkCopied}
+            disabled={isPending || !shared}
             onClick={() =>
               run(
                 "send",
@@ -168,6 +214,7 @@ export function QuoteStatusActions({
             disabled={isPending}
             onClick={() => {
               setNotice(null);
+              setConfirmingEmail(false);
               setActiveAction("duplicate");
               startTransition(async () => {
                 const result = await duplicateQuoteAction(quote.id);
@@ -193,10 +240,65 @@ export function QuoteStatusActions({
         )}
       </div>
 
-      {isDraft && !linkCopied && (
+      {confirmingEmail && canEmail && customerEmail && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border p-3">
+          <p className="text-sm">
+            Email this quote to <strong>{customerEmail}</strong>
+            {isDraft && " and mark it as sent"}?
+          </p>
+          <select
+            aria-label="What to email"
+            className={SELECT_CLASS}
+            value={emailMode}
+            disabled={isPending}
+            onChange={(e) =>
+              setEmailMode(e.target.value === "pdf" ? "pdf" : "link")
+            }
+          >
+            <option value="link">A link to the quote page</option>
+            <option value="pdf">The PDF attached (no link)</option>
+          </select>
+          <Button
+            type="button"
+            disabled={isPending}
+            onClick={() =>
+              run(
+                "email",
+                () => emailQuoteAction(quote.id, emailMode),
+                `Emailed to ${customerEmail}.`,
+                "Couldn't send the email.",
+              )
+            }
+          >
+            Yes, send it
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setConfirmingEmail(false)}
+          >
+            Cancel
+          </Button>
+        </div>
+      )}
+
+      {canEmail && !emailEnabled && (
         <p className="text-sm text-muted-foreground">
-          Copy the public link first, share it with the customer, then mark this
-          quote as sent. The link only works once the quote is marked as sent.
+          Emailing isn&apos;t set up on this server yet. You can still copy the
+          link or download the PDF and send it yourself.
+        </p>
+      )}
+      {canEmail && emailEnabled && !customerEmail && (
+        <p className="text-sm text-muted-foreground">
+          Add an email address to this customer to enable &ldquo;Email to
+          customer&rdquo;.
+        </p>
+      )}
+      {isDraft && !shared && (
+        <p className="text-sm text-muted-foreground">
+          Copy the public link or download the PDF first, send it to the
+          customer, then mark this quote as sent. (Emailing does both for you.)
+          The link only works once the quote is marked as sent.
         </p>
       )}
 

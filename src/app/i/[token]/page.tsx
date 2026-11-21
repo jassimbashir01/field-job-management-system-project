@@ -17,6 +17,8 @@ import {
   formatCents,
 } from "@/lib/money";
 import { InvoiceResponseActions } from "./invoice-response-actions";
+import { safeHexColor } from "@/lib/branding-utils";
+import { PaidPanel } from "./paid-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -184,11 +186,16 @@ export default async function PublicInvoicePage({
 
       <div className="mt-8 space-y-6">
         {invoice.status === "paid" && (
-          <p className="rounded-md border p-4 text-center text-sm">
-            <strong>Paid — thank you.</strong>
-            {invoice.paidAt &&
-              ` Payment was confirmed on ${invoice.paidAt.toISOString().slice(0, 10)}.`}
-          </p>
+          <PaidPanel
+            token={token}
+            paidOn={
+              invoice.paidAt ? invoice.paidAt.toISOString().slice(0, 10) : null
+            }
+            companyName={company?.name ?? "us"}
+            contactEmail={company?.contactEmail ?? null}
+            contactPhone={company?.contactPhone ?? null}
+            accent={safeHexColor(company?.primaryColor)}
+          />
         )}
 
         {invoice.status === "payment_reported" && (

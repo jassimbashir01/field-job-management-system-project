@@ -11,21 +11,32 @@ import {
   markPaymentNotReceivedAction,
   voidInvoiceAction,
 } from "../actions";
+import { emailInvoiceAction } from "../email-actions";
 
 type Notice = { kind: "success" | "error"; text: string };
+
+const SELECT_CLASS =
+  "border-input bg-background h-9 rounded-md border px-3 text-sm";
 
 export function InvoiceStatusActions({
   invoice,
   canWrite,
+  customerEmail,
+  emailEnabled,
 }: {
   invoice: typeof invoices.$inferSelect;
   canWrite: boolean;
+  customerEmail: string | null;
+  emailEnabled: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [confirming, setConfirming] = useState<"paid" | "void" | null>(null);
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [confirming, setConfirming] = useState<
+    "paid" | "void" | "email" | null
+  >(null);
+  const [emailMode, setEmailMode] = useState<"link" | "pdf">("link");
+  const [shared, setShared] = useState(false);
   const [justCopied, setJustCopied] = useState(false);
   const router = useRouter();
 
@@ -41,7 +52,23 @@ export function InvoiceStatusActions({
     return () => clearTimeout(timer);
   }, [justCopied]);
 
-  if (!canWrite) return null;
+  const downloadButton = (
+    <Button
+      variant="outline"
+      nativeButton={false}
+      render={
+        <a
+          href={`/api/invoices/${invoice.id}/pdf`}
+          download
+          onClick={() => setShared(true)}
+        >
+          Download PDF
+        </a>
+      }
+    />
+  );
+
+  if (!canWrite) return <div>{downloadButton}</div>;
 
   function run(
     name: string,
@@ -76,7 +103,7 @@ export function InvoiceStatusActions({
       await navigator.clipboard.writeText(
         `${window.location.origin}/i/${invoice.publicToken}`,
       );
-      setLinkCopied(true);
+      setShared(true);
       setJustCopied(true);
       setNotice({
         kind: "success",
@@ -94,10 +121,13 @@ export function InvoiceStatusActions({
   }
 
   const isDraft = invoice.status === "draft";
+  const canResend = invoice.status === "sent" || invoice.status === "viewed";
+  const canEmail = isDraft || canResend;
   const canSettle =
     invoice.status === "sent" ||
     invoice.status === "viewed" ||
     invoice.status === "payment_reported";
+  const emailReady = emailEnabled && Boolean(customerEmail);
   const busy = (name: string) => isPending && activeAction === name;
 
   return (
@@ -112,10 +142,29 @@ export function InvoiceStatusActions({
           {justCopied ? "Copied ✓" : "Copy public link"}
         </Button>
 
+        {downloadButton}
+
+        {canEmail && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isPending || !emailReady}
+            onClick={() =>
+              setConfirming(confirming === "email" ? null : "email")
+            }
+          >
+            {busy("email")
+              ? "Sending…"
+              : isDraft
+                ? "Email to customer…"
+                : "Email again…"}
+          </Button>
+        )}
+
         {isDraft && (
           <Button
             type="button"
-            disabled={isPending || !linkCopied}
+            disabled={isPending || !shared}
             onClick={() =>
               run(
                 "send",
@@ -206,7 +255,7 @@ export function InvoiceStatusActions({
         )}
       </div>
 
-      {confirming && (
+      {confirming && confirming !== "email" && (
         <div className="flex flex-wrap items-center gap-2 rounded-md border p-3">
           <p className="text-sm">
             {confirming === "paid"
@@ -245,11 +294,66 @@ export function InvoiceStatusActions({
         </div>
       )}
 
-      {isDraft && !linkCopied && (
+      {confirming === "email" && canEmail && customerEmail && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border p-3">
+          <p className="text-sm">
+            Email this invoice to <strong>{customerEmail}</strong>
+            {isDraft && " and mark it as sent"}?
+          </p>
+          <select
+            aria-label="What to email"
+            className={SELECT_CLASS}
+            value={emailMode}
+            disabled={isPending}
+            onChange={(e) =>
+              setEmailMode(e.target.value === "pdf" ? "pdf" : "link")
+            }
+          >
+            <option value="link">A link to the invoice page</option>
+            <option value="pdf">The PDF attached (no link)</option>
+          </select>
+          <Button
+            type="button"
+            disabled={isPending}
+            onClick={() =>
+              run(
+                "email",
+                () => emailInvoiceAction(invoice.id, emailMode),
+                `Emailed to ${customerEmail}.`,
+                "Couldn't send the email.",
+              )
+            }
+          >
+            Yes, send it
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setConfirming(null)}
+          >
+            Cancel
+          </Button>
+        </div>
+      )}
+
+      {canEmail && !emailEnabled && (
         <p className="text-sm text-muted-foreground">
-          Copy the public link first, share it with the customer, then mark this
-          invoice as sent. The link only works once the invoice is marked as
-          sent, and it needs at least one payment option ticked and saved.
+          Emailing isn&apos;t set up on this server yet. You can still copy the
+          link or download the PDF and send it yourself.
+        </p>
+      )}
+      {canEmail && emailEnabled && !customerEmail && (
+        <p className="text-sm text-muted-foreground">
+          Add an email address to this customer to enable &ldquo;Email to
+          customer&rdquo;.
+        </p>
+      )}
+      {isDraft && !shared && (
+        <p className="text-sm text-muted-foreground">
+          Copy the public link or download the PDF first, send it to the
+          customer, then mark this invoice as sent. (Emailing does both for
+          you.) The link only works once the invoice is marked as sent, and it
+          needs at least one payment option ticked and saved.
         </p>
       )}
 

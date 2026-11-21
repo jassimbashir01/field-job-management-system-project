@@ -32,6 +32,7 @@ import { isUuid } from "@/lib/uuid";
 import { QuoteForm } from "../quote-form";
 import { QuoteStatusActions } from "./quote-status-actions";
 import { QuoteDeleteSection } from "./delete-section";
+import { isEmailConfigured } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -175,7 +176,12 @@ export default async function QuoteDetailPage({
         </div>
       )}
 
-      <QuoteStatusActions quote={quote} canWrite={access.canWrite} />
+      <QuoteStatusActions
+        quote={quote}
+        canWrite={access.canWrite}
+        customerEmail={quoteCustomer?.email ?? null}
+        emailEnabled={isEmailConfigured()}
+      />
 
       <QuoteForm
         quote={quote}
