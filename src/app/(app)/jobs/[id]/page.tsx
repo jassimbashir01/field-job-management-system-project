@@ -39,6 +39,8 @@ import {
 import { getCompanyCurrency, getInvoiceTotals } from "@/lib/document-totals";
 import { isInvoiceOverdue } from "@/lib/invoice-status";
 import { formatCents } from "@/lib/money";
+import { isEmailConfigured } from "@/lib/email";
+import { JobReportActions } from "./job-report-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -312,7 +314,16 @@ export default async function JobDetailPage({
           )}
         </div>
       )}
-
+      {job.status === "completed" && (
+        <JobReportActions
+          jobId={job.id}
+          canEmail={access.canWrite}
+          customerEmail={
+            allCustomers.find((c) => c.id === job.customerId)?.email ?? null
+          }
+          emailEnabled={isEmailConfigured()}
+        />
+      )}
       <div className="mt-8 border-t pt-6">
         {invoiceAccess.canRead && (
           <RelatedDocuments

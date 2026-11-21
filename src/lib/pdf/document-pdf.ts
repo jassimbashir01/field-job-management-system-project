@@ -67,7 +67,7 @@ const LIGHT = rgb(0.88, 0.88, 0.89);
 const ZEBRA = rgb(0.972, 0.972, 0.976);
 const INK = rgb(0.1, 0.1, 0.1);
 
-class Text {
+export class Text {
   private readonly supported: Set<number>;
   constructor(
     readonly regular: PDFFont,
