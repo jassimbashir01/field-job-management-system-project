@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { invoices } from "@/db/schema";
+import { customers, invoices } from "@/db/schema";
 import { logPublicActivity } from "@/lib/activity-log";
+import { notifyCategory } from "@/lib/notifications";
 import {
   ConflictError,
   NotFoundError,
@@ -26,6 +27,15 @@ export async function reportPaymentAction(
     }
 
     const db = getDb();
+    const outcome: {
+      reported: {
+        id: string;
+        invoiceNumber: number;
+        title: string;
+        customerId: string;
+      } | null;
+    } = { reported: null };
+
     await db.transaction(async (tx) => {
       const [invoice] = await tx
         .select()
@@ -73,7 +83,29 @@ export async function reportPaymentAction(
         metadata: { from: invoice.status, to: "payment_reported" },
         tx,
       });
+
+      outcome.reported = {
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        title: invoice.title,
+        customerId: invoice.customerId,
+      };
     });
+
+    const r = outcome.reported;
+    if (r) {
+      const [customer] = await db
+        .select({ name: customers.name })
+        .from(customers)
+        .where(eq(customers.id, r.customerId))
+        .limit(1);
+      await notifyCategory({
+        category: "invoice_payment_reported",
+        title: `Payment reported on invoice #${r.invoiceNumber}`,
+        body: `${customer?.name ?? "A customer"} says they've paid "${r.title}". Check your account, then mark it paid.`,
+        href: `/invoices/${r.id}`,
+      });
+    }
 
     revalidatePath(`/i/${token}`);
     revalidatePath("/invoices");

@@ -7,6 +7,8 @@ import { QUICK_ACTIONS } from "@/lib/quick-actions-config";
 import { QuickActions } from "@/components/shared/quick-actions";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { UserMenu } from "@/components/shared/user-menu";
+import { NotificationBell } from "@/components/shared/notification-bell";
+import { getNotificationSnapshot } from "@/lib/notifications";
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
@@ -26,6 +28,7 @@ export default async function AppLayout({
 
   const isAdmin = user.role === "admin";
   const accessLevels = await getUserAccessLevels(user);
+  const notificationSnapshot = await getNotificationSnapshot(user.id);
 
   const visibleNavItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly) return isAdmin;
@@ -59,6 +62,7 @@ export default async function AppLayout({
 
       <div className="flex flex-1 flex-col">
         <header className="flex h-14 items-center justify-end gap-2 border-b px-4">
+          <NotificationBell initial={notificationSnapshot} />
           <ThemeToggle />
           <UserMenu
             displayName={user.displayName}

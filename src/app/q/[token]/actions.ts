@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { quotes } from "@/db/schema";
+import { customers, quotes } from "@/db/schema";
 import { logPublicActivity } from "@/lib/activity-log";
 import { createJobFromQuote } from "@/lib/create-job-from-quote";
 import { isQuoteExpired } from "@/lib/quote-status";
+import { notifyCategory } from "@/lib/notifications";
 import {
   ConflictError,
   NotFoundError,
@@ -32,12 +33,30 @@ async function loadQuoteByToken(
   return quote;
 }
 
-/** Accepting creates a Draft job via the shared createJobFromQuote. */
+async function customerNameFor(customerId: string): Promise<string> {
+  const [row] = await getDb()
+    .select({ name: customers.name })
+    .from(customers)
+    .where(eq(customers.id, customerId))
+    .limit(1);
+  return row?.name ?? "A customer";
+}
+
 export async function acceptQuoteAction(
   token: string,
 ): Promise<PublicQuoteResult> {
   try {
     const db = getDb();
+    const outcome: {
+      accepted: {
+        id: string;
+        quoteNumber: number;
+        title: string;
+        customerId: string;
+        jobNumber: number;
+      } | null;
+    } = { accepted: null };
+
     await db.transaction(async (tx) => {
       const quote = await loadQuoteByToken(tx, token);
 
@@ -79,7 +98,25 @@ export async function acceptQuoteAction(
         summary: `created from quote #${quote.quoteNumber}, accepted via the public link`,
         tx,
       });
+
+      outcome.accepted = {
+        id: quote.id,
+        quoteNumber: quote.quoteNumber,
+        title: quote.title,
+        customerId: quote.customerId,
+        jobNumber: createdJob.jobNumber,
+      };
     });
+
+    const a = outcome.accepted;
+    if (a) {
+      await notifyCategory({
+        category: "quote_accepted",
+        title: `Quote #${a.quoteNumber} accepted`,
+        body: `${await customerNameFor(a.customerId)} accepted "${a.title}". Job #${a.jobNumber} was created as a draft.`,
+        href: `/quotes/${a.id}`,
+      });
+    }
 
     revalidatePath(`/q/${token}`);
     return { success: true };
@@ -93,6 +130,15 @@ export async function declineQuoteAction(
 ): Promise<PublicQuoteResult> {
   try {
     const db = getDb();
+    const outcome: {
+      declined: {
+        id: string;
+        quoteNumber: number;
+        title: string;
+        customerId: string;
+      } | null;
+    } = { declined: null };
+
     await db.transaction(async (tx) => {
       const quote = await loadQuoteByToken(tx, token);
 
@@ -123,7 +169,24 @@ export async function declineQuoteAction(
         metadata: { from: quote.status, to: "declined" },
         tx,
       });
+
+      outcome.declined = {
+        id: quote.id,
+        quoteNumber: quote.quoteNumber,
+        title: quote.title,
+        customerId: quote.customerId,
+      };
     });
+
+    const d = outcome.declined;
+    if (d) {
+      await notifyCategory({
+        category: "quote_declined",
+        title: `Quote #${d.quoteNumber} declined`,
+        body: `${await customerNameFor(d.customerId)} declined "${d.title}".`,
+        href: `/quotes/${d.id}`,
+      });
+    }
 
     revalidatePath(`/q/${token}`);
     return { success: true };
