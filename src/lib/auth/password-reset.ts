@@ -1,10 +1,11 @@
 import { randomBytes, createHash } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { getDb } from "@/db";
-import { passwordResetTokens, users } from "@/db/schema";
+import { passwordResetTokens, sessions, users } from "@/db/schema";
 import { hashPassword } from "./password";
 
-const RESET_TOKEN_DURATION_MS = 60 * 60 * 1000;
+export const RESET_TOKEN_DURATION_MS = 60 * 60 * 1000;
+const REQUEST_COOLDOWN_MS = 2 * 60 * 1000;
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -18,22 +19,39 @@ export async function createPasswordResetToken(
   const expiresAt = new Date(Date.now() + RESET_TOKEN_DURATION_MS);
 
   const db = getDb();
-  await db.insert(passwordResetTokens).values({
-    id: tokenHash,
-    userId,
-    expiresAt,
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(passwordResetTokens)
+      .where(eq(passwordResetTokens.userId, userId));
+    await tx
+      .insert(passwordResetTokens)
+      .values({ id: tokenHash, userId, expiresAt });
   });
 
   return rawToken;
+}
+
+export async function hasRecentResetRequest(userId: string): Promise<boolean> {
+  const since = new Date(Date.now() - REQUEST_COOLDOWN_MS);
+  const rows = await getDb()
+    .select({ createdAt: passwordResetTokens.createdAt })
+    .from(passwordResetTokens)
+    .where(
+      and(
+        eq(passwordResetTokens.userId, userId),
+        gt(passwordResetTokens.createdAt, since),
+      ),
+    )
+    .orderBy(desc(passwordResetTokens.createdAt))
+    .limit(1);
+  return rows.length > 0;
 }
 
 export async function isPasswordResetTokenValid(
   rawToken: string,
 ): Promise<boolean> {
   const tokenHash = hashToken(rawToken);
-  const db = getDb();
-
-  const rows = await db
+  const rows = await getDb()
     .select({ expiresAt: passwordResetTokens.expiresAt })
     .from(passwordResetTokens)
     .where(eq(passwordResetTokens.id, tokenHash))
@@ -75,7 +93,8 @@ export async function consumePasswordResetToken(
 
     await tx
       .delete(passwordResetTokens)
-      .where(eq(passwordResetTokens.id, tokenHash));
+      .where(eq(passwordResetTokens.userId, tokenRow.userId));
+    await tx.delete(sessions).where(eq(sessions.userId, tokenRow.userId));
 
     return true;
   });
