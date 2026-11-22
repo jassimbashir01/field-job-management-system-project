@@ -4,11 +4,12 @@ import { requireRoleOrRedirect } from "@/lib/auth/guards";
 import { getUserAccessLevels } from "@/lib/auth/permissions";
 import { NAV_ITEMS } from "@/lib/nav-config";
 import { QUICK_ACTIONS } from "@/lib/quick-actions-config";
+import { getNotificationSnapshot } from "@/lib/notifications";
+import { LiveProvider } from "@/components/shared/live-provider";
+import { NotificationBell } from "@/components/shared/notification-bell";
 import { QuickActions } from "@/components/shared/quick-actions";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { UserMenu } from "@/components/shared/user-menu";
-import { NotificationBell } from "@/components/shared/notification-bell";
-import { getNotificationSnapshot } from "@/lib/notifications";
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
@@ -44,36 +45,38 @@ export default async function AppLayout({
   });
 
   return (
-    <div className="flex min-h-dvh">
-      <aside className="bg-sidebar hidden w-56 shrink-0 border-r p-4 md:block">
-        <nav aria-label="Main navigation" className="space-y-1">
-          {visibleNavItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
+    <LiveProvider initialNotifications={notificationSnapshot}>
+      <div className="flex min-h-dvh">
+        <aside className="bg-sidebar hidden w-56 shrink-0 border-r p-4 md:block">
+          <nav aria-label="Main navigation" className="space-y-1">
+            {visibleNavItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
+              >
+                <item.icon className="size-4" />
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </aside>
 
-      <div className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center justify-end gap-2 border-b px-4">
-          <NotificationBell initial={notificationSnapshot} />
-          <ThemeToggle />
-          <UserMenu
-            displayName={user.displayName}
-            email={user.email}
-            roleLabel={user.jobTitle ?? ROLE_LABELS[user.role] ?? user.role}
-          />
-        </header>
-        <main className="flex-1 p-6">{children}</main>
+        <div className="flex flex-1 flex-col">
+          <header className="flex h-14 items-center justify-end gap-2 border-b px-4">
+            <NotificationBell />
+            <ThemeToggle />
+            <UserMenu
+              displayName={user.displayName}
+              email={user.email}
+              roleLabel={user.jobTitle ?? ROLE_LABELS[user.role] ?? user.role}
+            />
+          </header>
+          <main className="flex-1 p-6">{children}</main>
+        </div>
+
+        <QuickActions actions={visibleQuickActions} />
       </div>
-
-      <QuickActions actions={visibleQuickActions} />
-    </div>
+    </LiveProvider>
   );
 }

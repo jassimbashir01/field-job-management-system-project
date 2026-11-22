@@ -9,6 +9,7 @@ import {
 } from "@/lib/money";
 import { isQuoteExpired } from "@/lib/quote-status";
 import { QuoteResponseActions } from "./quote-response-actions";
+import { PublicLive } from "@/components/shared/public-live";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,7 @@ export default async function PublicQuotePage({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
+      <PublicLive kind="quote" token={token} />
       <header className="mb-8 flex items-center gap-3 border-b pb-6">
         {company?.logoUrl && (
           // eslint-disable-next-line @next/next/no-img-element

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useLiveNotifications } from "@/components/shared/live-provider";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +19,6 @@ import {
   markNotificationReadAction,
   type SnapshotResult,
 } from "@/app/(app)/notifications/actions";
-import type { NotificationSnapshot } from "@/lib/notification-types";
 
 const formatWhen = (iso: string) =>
   `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
@@ -26,27 +26,15 @@ const formatWhen = (iso: string) =>
 const isInternalPath = (href: string | null): href is string =>
   Boolean(href && href.startsWith("/") && !href.startsWith("//"));
 
-export function NotificationBell({
-  initial,
-}: {
-  initial: NotificationSnapshot;
-}) {
+export function NotificationBell() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [fresh, setFresh] = useState<NotificationSnapshot | null>(null);
-  const [seenInitial, setSeenInitial] = useState(initial);
+  const { notifications: snapshot, setNotifications } = useLiveNotifications();
   const [error, setError] = useState<string | null>(null);
-
-  if (seenInitial !== initial) {
-    setSeenInitial(initial);
-    setFresh(null);
-  }
-
-  const snapshot = fresh ?? initial;
 
   function apply(result: SnapshotResult) {
     if (result.success && result.snapshot) {
-      setFresh(result.snapshot);
+      setNotifications(result.snapshot);
       setError(null);
     } else {
       setError(result.error?.message ?? "Couldn't load notifications.");

@@ -19,6 +19,7 @@ import {
 import { InvoiceResponseActions } from "./invoice-response-actions";
 import { safeHexColor } from "@/lib/branding-utils";
 import { PaidPanel } from "./paid-panel";
+import { PublicLive } from "@/components/shared/public-live";
 
 export const dynamic = "force-dynamic";
 
@@ -121,6 +122,7 @@ export default async function PublicInvoicePage({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
+      <PublicLive kind="invoice" token={token} />
       <header className="mb-8 flex items-center gap-3 border-b pb-6">
         {company?.logoUrl && (
           <img
