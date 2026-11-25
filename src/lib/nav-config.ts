@@ -11,6 +11,7 @@ import {
   FileText,
   Receipt,
   CalendarClock,
+  Plane,
 } from "lucide-react";
 
 export interface NavItem {
@@ -32,6 +33,13 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "Rota", href: "/rota", icon: CalendarClock, resourceKey: "rota" },
   { label: "Quotes", href: "/quotes", icon: FileText, resourceKey: "quotes" },
+
+  {
+    label: "Holidays",
+    href: "/holidays",
+    icon: Plane,
+    resourceKey: "holidays",
+  },
   {
     label: "Invoices",
     href: "/invoices",

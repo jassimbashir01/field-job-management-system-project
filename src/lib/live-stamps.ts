@@ -4,6 +4,7 @@ import { getDb } from "@/db";
 import {
   customers,
   equipment,
+  holidayRequests,
   invoices,
   jobChecklistItems,
   jobEquipment,
@@ -40,6 +41,11 @@ export async function getLiveStamps(
   );
   simple("equipment", () =>
     db.select({ c: count(), m: max(equipment.updatedAt) }).from(equipment),
+  );
+  simple("holidays", () =>
+    db
+      .select({ c: count(), m: max(holidayRequests.updatedAt) })
+      .from(holidayRequests),
   );
   simple("quotes", () =>
     db.select({ c: count(), m: max(quotes.updatedAt) }).from(quotes),

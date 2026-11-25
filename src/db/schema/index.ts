@@ -3,6 +3,7 @@ export * from "./companies";
 export * from "./custom-fields";
 export * from "./customers";
 export * from "./equipment";
+export * from "./holiday-requests";
 export * from "./invoices";
 export * from "./job-equipment";
 export * from "./job-files";

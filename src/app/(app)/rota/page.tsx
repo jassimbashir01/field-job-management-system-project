@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { getDb } from "@/db";
-import { shifts, users } from "@/db/schema";
+import { holidayRequests, shifts, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
 import { getResourceAccess } from "@/lib/auth/permissions";
 import { ForbiddenMessage } from "@/components/shared/forbidden-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { dateInRange } from "@/lib/holidays";
 import { needsAnnouncing, normalizeTime, shiftState } from "@/lib/rota";
 import {
   addDays,
@@ -37,7 +38,7 @@ export default async function RotaPage({
   const today = todayDateString();
 
   const db = getDb();
-  const [people, weekShifts] = await Promise.all([
+  const [people, weekShifts, weekHolidays] = await Promise.all([
     db
       .select({ id: users.id, displayName: users.displayName })
       .from(users)
@@ -50,12 +51,31 @@ export default async function RotaPage({
         and(gte(shifts.shiftDate, firstDay), lte(shifts.shiftDate, lastDay)),
       )
       .orderBy(asc(shifts.startTime)),
+    db
+      .select({
+        userId: holidayRequests.userId,
+        startDate: holidayRequests.startDate,
+        endDate: holidayRequests.endDate,
+      })
+      .from(holidayRequests)
+      .where(
+        and(
+          eq(holidayRequests.status, "accepted"),
+          lte(holidayRequests.startDate, lastDay),
+          gte(holidayRequests.endDate, firstDay),
+        ),
+      ),
   ]);
 
   const personIds = new Set(people.map((p) => p.id));
   const visible = weekShifts.filter((s) => personIds.has(s.userId));
   const pending = visible.filter(needsAnnouncing);
   const peopleToTell = new Set(pending.map((s) => s.userId)).size;
+
+  const onHolidayOn = (userId: string, day: string) =>
+    weekHolidays.some(
+      (h) => h.userId === userId && dateInRange(day, h.startDate, h.endDate),
+    );
 
   const cellShifts = (userId: string, shiftDate: string): CellShift[] =>
     visible
@@ -174,6 +194,7 @@ export default async function RotaPage({
                           date={weekDate}
                           shifts={cellShifts(person.id, weekDate)}
                           canWrite={access.canWrite}
+                          onHoliday={onHolidayOn(person.id, weekDate)}
                         />
                       </td>
                     ))}
@@ -193,8 +214,13 @@ export default async function RotaPage({
           <p className="mt-3 text-xs text-muted-foreground">
             <strong>Draft</strong> (dashed): staff haven&apos;t been told.{" "}
             <strong>Changed</strong>: edited since they were told.{" "}
-            <strong>Cancelled</strong>: removed, not yet announced. Staff are
-            emailed when you publish the week.
+            <strong>Cancelled</strong>: removed, not yet announced.
+            <strong>On holiday</strong>: an accepted{" "}
+            <Link href="/holidays" className="underline">
+              holiday request
+            </Link>
+            ; adding a shift there asks you to confirm. Staff are emailed when
+            you publish the week.
           </p>
         </>
       )}

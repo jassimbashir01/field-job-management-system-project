@@ -29,6 +29,10 @@ export function useLiveNotifications(): LiveContextValue {
   return value;
 }
 
+export function markLiveSaved(): void {
+  window.dispatchEvent(new Event("live-saved"));
+}
+
 const signature = (n: NotificationSnapshot) =>
   `${n.unreadCount}:${n.items[0]?.id ?? ""}`;
 
@@ -153,15 +157,20 @@ export function LiveProvider({
     const onSubmit = () => {
       dirtyFields.current.clear();
     };
+    const onSaved = () => {
+      dirtyFields.current.clear();
+      setBannerPath(null);
+    };
     const onVisible = () => {
       if (visible()) void check();
     };
 
-    void check(); // sets the baseline stamps
+    void check();
     loop();
     document.addEventListener("visibilitychange", onVisible);
     document.addEventListener("input", onInput, true);
     document.addEventListener("submit", onSubmit, true);
+    window.addEventListener("live-saved", onSaved);
 
     return () => {
       cancelled = true;
@@ -169,6 +178,7 @@ export function LiveProvider({
       document.removeEventListener("visibilitychange", onVisible);
       document.removeEventListener("input", onInput, true);
       document.removeEventListener("submit", onSubmit, true);
+      window.removeEventListener("live-saved", onSaved);
     };
   }, [refreshNow]);
 

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, asc, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import * as z from "zod";
 import { getDb } from "@/db";
-import { shifts, users } from "@/db/schema";
+import { holidayRequests, shifts, users } from "@/db/schema";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/auth/permission-catalog";
 import { isEmailConfigured, sendEmail } from "@/lib/email";
@@ -15,6 +15,7 @@ import {
   toSafeError,
   type SafeError,
 } from "@/lib/errors";
+import { dateInRange } from "@/lib/holidays";
 import { logger } from "@/lib/logger";
 import { loadBranding } from "@/lib/pdf/load-document";
 import {
@@ -33,17 +34,26 @@ export interface RotaResult {
   success: boolean;
   error: SafeError | null;
   message: string | null;
+  warning: string | null;
 }
 
 const ok = (message: string | null = null): RotaResult => ({
   success: true,
   error: null,
   message,
+  warning: null,
+});
+const warn = (warning: string): RotaResult => ({
+  success: false,
+  error: null,
+  message: null,
+  warning,
 });
 const fail = (error: unknown): RotaResult => ({
   success: false,
   error: toSafeError(error),
   message: null,
+  warning: null,
 });
 
 const dateString = z
@@ -58,6 +68,7 @@ const saveSchema = z.object({
   endTime: z.string(),
   note: z.string().max(200, "Keep the note under 200 characters.").optional(),
   repeatWeeks: z.number().int().min(1).max(12).default(1),
+  confirmHoliday: z.boolean().optional(),
 });
 
 export interface SaveShiftInput {
@@ -68,6 +79,38 @@ export interface SaveShiftInput {
   endTime: string;
   note?: string;
   repeatWeeks?: number;
+  confirmHoliday?: boolean;
+}
+
+async function holidayClashes(
+  userId: string,
+  dates: string[],
+): Promise<string[]> {
+  const first = [...dates].sort()[0];
+  const last = [...dates].sort().at(-1);
+  if (!first || !last) return [];
+  const holidays = await getDb()
+    .select({
+      startDate: holidayRequests.startDate,
+      endDate: holidayRequests.endDate,
+    })
+    .from(holidayRequests)
+    .where(
+      and(
+        eq(holidayRequests.userId, userId),
+        eq(holidayRequests.status, "accepted"),
+        lte(holidayRequests.startDate, last),
+        gte(holidayRequests.endDate, first),
+      ),
+    );
+  return dates.filter((day) =>
+    holidays.some((h) => dateInRange(day, h.startDate, h.endDate)),
+  );
+}
+
+function holidayWarning(personDates: string[]): string {
+  const list = personDates.map(shortDateOf).join(", ");
+  return `This person has an approved holiday on ${list}. Save anyway to schedule a shift over it.`;
 }
 
 async function findOverlap(
@@ -135,6 +178,7 @@ export async function saveShiftAction(
 
     const note = data.note?.trim() ? data.note.trim() : null;
 
+    // Editing one shift
     if (data.id) {
       const [existing] = await db
         .select()
@@ -151,6 +195,10 @@ export async function saveShiftAction(
         throw new ConflictError(
           "That overlaps another shift for the same person.",
         );
+      }
+      if (!data.confirmHoliday) {
+        const clashes = await holidayClashes(existing.userId, [data.date]);
+        if (clashes.length > 0) return warn(holidayWarning(clashes));
       }
       await db
         .update(shifts)
@@ -170,6 +218,13 @@ export async function saveShiftAction(
       );
     }
 
+    if (!data.confirmHoliday) {
+      const wanted = Array.from({ length: data.repeatWeeks }, (_, i) =>
+        addDays(data.date, 7 * i),
+      );
+      const clashes = await holidayClashes(data.userId, wanted);
+      if (clashes.length > 0) return warn(holidayWarning(clashes));
+    }
     const created: string[] = [];
     const skipped: string[] = [];
     for (let i = 0; i < data.repeatWeeks; i++) {
@@ -282,6 +337,7 @@ export async function copyPreviousWeekAction(
 
     let copied = 0;
     let skipped = 0;
+    const copiedRows: Array<{ userId: string; shiftDate: string }> = [];
     for (const row of source) {
       const shiftDate = addDays(row.shiftDate, 7);
       if (
@@ -299,6 +355,32 @@ export async function copyPreviousWeekAction(
         status: "draft",
       });
       copied++;
+      copiedRows.push({ userId: row.userId, shiftDate });
+    }
+
+    let onHoliday = 0;
+    if (copiedRows.length > 0) {
+      const holidays = await db
+        .select({
+          userId: holidayRequests.userId,
+          startDate: holidayRequests.startDate,
+          endDate: holidayRequests.endDate,
+        })
+        .from(holidayRequests)
+        .where(
+          and(
+            eq(holidayRequests.status, "accepted"),
+            lte(holidayRequests.startDate, last),
+            gte(holidayRequests.endDate, first),
+          ),
+        );
+      onHoliday = copiedRows.filter((c) =>
+        holidays.some(
+          (h) =>
+            h.userId === c.userId &&
+            dateInRange(c.shiftDate, h.startDate, h.endDate),
+        ),
+      ).length;
     }
 
     revalidatePath("/rota");
@@ -308,7 +390,11 @@ export async function copyPreviousWeekAction(
       );
     }
     return ok(
-      `Copied ${copied} shift${copied === 1 ? "" : "s"} as drafts${skipped > 0 ? `; ${skipped} skipped (already there or overlapping)` : ""}.`,
+      `Copied ${copied} shift${copied === 1 ? "" : "s"} as drafts${skipped > 0 ? `; ${skipped} skipped (already there or overlapping)` : ""}.${
+        onHoliday > 0
+          ? ` ${onHoliday} ${onHoliday === 1 ? "falls" : "fall"} on an approved holiday — review ${onHoliday === 1 ? "it" : "them"}.`
+          : ""
+      }`,
     );
   } catch (error) {
     return fail(error);

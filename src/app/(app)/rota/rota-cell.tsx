@@ -37,12 +37,14 @@ export function RotaCell({
   date,
   shifts,
   canWrite,
+  onHoliday,
 }: {
   userId: string;
   personName: string;
   date: string;
   shifts: CellShift[];
   canWrite: boolean;
+  onHoliday: boolean;
 }) {
   const [mode, setMode] = useState<Mode>({ kind: "view" });
   const [start, setStart] = useState("09:00");
@@ -51,11 +53,13 @@ export function RotaCell({
   const [repeatWeeks, setRepeatWeeks] = useState("1");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const open = (next: Mode) => {
     setError(null);
     setInfo(null);
+    setWarning(null);
     if (next.kind === "edit") {
       setStart(next.shift.startTime);
       setEnd(next.shift.endTime);
@@ -69,9 +73,10 @@ export function RotaCell({
     setMode(next);
   };
 
-  const save = () =>
+  const save = (confirmHoliday = false) =>
     startTransition(async () => {
       setError(null);
+      setWarning(null);
       const result = await saveShiftAction({
         ...(mode.kind === "edit" ? { id: mode.shift.id } : {}),
         userId,
@@ -80,8 +85,11 @@ export function RotaCell({
         endTime: end,
         note,
         repeatWeeks: mode.kind === "add" ? Number(repeatWeeks) : 1,
+        confirmHoliday,
       });
-      if (result.success) {
+      if (result.warning) {
+        setWarning(result.warning);
+      } else if (result.success) {
         setInfo(result.message);
         setMode({ kind: "view" });
       } else {
@@ -103,6 +111,11 @@ export function RotaCell({
 
   return (
     <div className="space-y-1">
+      {onHoliday && (
+        <p className="rounded-md border border-dashed bg-muted px-1.5 py-1 text-xs font-medium text-muted-foreground">
+          On holiday
+        </p>
+      )}
       {shifts.map((shift) => {
         const label = STATE_LABEL[shift.state];
         const body = (
@@ -194,10 +207,21 @@ export function RotaCell({
               {error}
             </p>
           )}
+          {warning && (
+            <p role="alert" className="font-medium">
+              {warning}
+            </p>
+          )}
           <div className="flex flex-wrap gap-1">
-            <Button size="sm" disabled={isPending} onClick={save}>
-              {isPending ? "Saving…" : "Save"}
-            </Button>
+            {warning ? (
+              <Button size="sm" disabled={isPending} onClick={() => save(true)}>
+                {isPending ? "Saving…" : "Save anyway"}
+              </Button>
+            ) : (
+              <Button size="sm" disabled={isPending} onClick={() => save()}>
+                {isPending ? "Saving…" : "Save"}
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
