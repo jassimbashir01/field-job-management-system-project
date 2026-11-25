@@ -1,5 +1,5 @@
 import "server-only";
-import { count, eq, max, sql } from "drizzle-orm";
+import { and, count, eq, max, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   customers,
@@ -10,7 +10,9 @@ import {
   jobFiles,
   jobs,
   quotes,
+  shifts,
   sites,
+  users,
 } from "@/db/schema";
 import type { LiveKey } from "@/lib/live-routes";
 
@@ -45,6 +47,20 @@ export async function getLiveStamps(
   simple("invoices", () =>
     db.select({ c: count(), m: max(invoices.updatedAt) }).from(invoices),
   );
+
+  if (readable.has("rota")) {
+    tasks.push(
+      Promise.all([
+        db.select({ c: count(), m: max(shifts.updatedAt) }).from(shifts),
+        db
+          .select({ c: count(), m: max(users.updatedAt) })
+          .from(users)
+          .where(and(eq(users.role, "team_member"), eq(users.isActive, true))),
+      ]).then(([s, people]) => {
+        out.rota = `${text(s)}|${text(people)}`;
+      }),
+    );
+  }
 
   if (readable.has("jobs")) {
     tasks.push(

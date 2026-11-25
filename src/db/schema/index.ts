@@ -16,4 +16,5 @@ export * from "./quotes";
 export * from "./sessions";
 export * from "./sites";
 export * from "./storage-blobs";
+export * from "./shifts";
 export * from "./users";

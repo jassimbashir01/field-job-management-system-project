@@ -13,6 +13,7 @@ export const RESOURCES: ResourceConfig[] = [
   { key: "jobs", label: "Jobs", maxLevel: "delete" },
   { key: "recurring_jobs", label: "Recurring Jobs", maxLevel: "delete" },
   { key: "quotes", label: "Quotes", maxLevel: "delete" },
+  { key: "rota", label: "Rota", maxLevel: "write" },
   { key: "team", label: "Team (view + reset passwords)", maxLevel: "write" },
   { key: "invoices", label: "Invoices", maxLevel: "delete" },
 ];
@@ -65,6 +66,8 @@ export const PERMISSIONS = {
   INVOICES_READ: permissionKey("invoices", "read"),
   INVOICES_WRITE: permissionKey("invoices", "write"),
   INVOICES_DELETE: permissionKey("invoices", "delete"),
+  ROTA_READ: permissionKey("rota", "read"),
+  ROTA_WRITE: permissionKey("rota", "write"),
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

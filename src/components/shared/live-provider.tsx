@@ -29,7 +29,6 @@ export function useLiveNotifications(): LiveContextValue {
   return value;
 }
 
-const currentKey = () => `${window.location.pathname}${window.location.search}`;
 const signature = (n: NotificationSnapshot) =>
   `${n.unreadCount}:${n.items[0]?.id ?? ""}`;
 
@@ -55,18 +54,18 @@ export function LiveProvider({
   const lastStamps = useRef<Record<string, string> | null>(null);
   const lastNotifSignature = useRef(signature(initialNotifications));
   const pending = useRef(false);
-  const dirtyKey = useRef<string | null>(null);
+  const dirtyFields = useRef<Set<Element>>(new Set());
   const stopped = useRef(false);
 
   useEffect(() => {
     pathnameRef.current = pathname;
     pending.current = false;
-    dirtyKey.current = null;
+    dirtyFields.current.clear();
   }, [pathname]);
 
   const refreshNow = useCallback(() => {
     pending.current = false;
-    dirtyKey.current = null;
+    dirtyFields.current.clear();
     setBannerPath(null);
     router.refresh();
   }, [router]);
@@ -79,7 +78,10 @@ export function LiveProvider({
 
     const applyPending = () => {
       if (!pending.current) return;
-      if (dirtyKey.current === currentKey()) {
+      const typing = [...dirtyFields.current].some(
+        (field) => field.isConnected,
+      );
+      if (typing) {
         setBannerPath(pathnameRef.current);
       } else {
         refreshNow();
@@ -145,17 +147,17 @@ export function LiveProvider({
     const onInput = (event: Event) => {
       const target = event.target;
       if (target instanceof Element && target.closest("main")) {
-        dirtyKey.current = currentKey();
+        dirtyFields.current.add(target);
       }
     };
     const onSubmit = () => {
-      dirtyKey.current = null;
+      dirtyFields.current.clear();
     };
     const onVisible = () => {
       if (visible()) void check();
     };
 
-    void check();
+    void check(); // sets the baseline stamps
     loop();
     document.addEventListener("visibilitychange", onVisible);
     document.addEventListener("input", onInput, true);

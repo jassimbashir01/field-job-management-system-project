@@ -10,6 +10,7 @@ import {
   Wrench,
   FileText,
   Receipt,
+  CalendarClock,
 } from "lucide-react";
 
 export interface NavItem {
@@ -29,7 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: CalendarDays,
     resourceKey: "jobs",
   },
-
+  { label: "Rota", href: "/rota", icon: CalendarClock, resourceKey: "rota" },
   { label: "Quotes", href: "/quotes", icon: FileText, resourceKey: "quotes" },
   {
     label: "Invoices",
