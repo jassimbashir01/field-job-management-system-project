@@ -12,6 +12,7 @@ import {
   Receipt,
   CalendarClock,
   Plane,
+  Clock,
 } from "lucide-react";
 
 export interface NavItem {
@@ -40,6 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Plane,
     resourceKey: "holidays",
   },
+  { label: "Attendance", href: "/punch", icon: Clock, resourceKey: "punch" },
   {
     label: "Invoices",
     href: "/invoices",

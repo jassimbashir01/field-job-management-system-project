@@ -7,6 +7,7 @@ export type LiveKey =
   | "invoices"
   | "rota"
   | "holidays"
+  | "punch"
   | "notifications";
 
 const ALL_DATA: LiveKey[] = [
@@ -44,6 +45,7 @@ const RULES: Array<{ prefix: string; keys: LiveKey[] }> = [
   { prefix: "/equipment", keys: ["equipment", "sites", "jobs"] },
   { prefix: "/rota", keys: ["rota", "holidays"] },
   { prefix: "/holidays", keys: ["holidays"] },
+  { prefix: "/punch", keys: ["punch", "jobs"] },
   { prefix: "/notifications", keys: ["notifications"] },
 ];
 

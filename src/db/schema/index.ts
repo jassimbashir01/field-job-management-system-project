@@ -13,6 +13,7 @@ export * from "./jobs";
 export * from "./notifications";
 export * from "./password-reset-tokens";
 export * from "./permissions";
+export * from "./punches";
 export * from "./quotes";
 export * from "./sessions";
 export * from "./sites";

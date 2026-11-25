@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, boolean } from "drizzle-orm/pg-core";
 
 export const companies = pgTable("companies", {
   id: uuid().primaryKey().defaultRandom(),
@@ -14,6 +14,7 @@ export const companies = pgTable("companies", {
   postalCode: text(),
   country: text(),
   timezone: text().notNull().default("UTC"),
+  punchLocationEnabled: boolean().notNull().default(false),
   currency: text().notNull().default("USD"),
   defaultTeamMemberLabel: text().notNull().default("Team Member"),
   developerCreditText: text(),

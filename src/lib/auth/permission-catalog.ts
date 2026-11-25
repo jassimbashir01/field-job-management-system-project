@@ -15,6 +15,7 @@ export const RESOURCES: ResourceConfig[] = [
   { key: "quotes", label: "Quotes", maxLevel: "delete" },
   { key: "rota", label: "Rota", maxLevel: "write" },
   { key: "holidays", label: "Holiday requests", maxLevel: "write" },
+  { key: "punch", label: "Attendance", maxLevel: "write" },
   { key: "team", label: "Team (view + reset passwords)", maxLevel: "write" },
   { key: "invoices", label: "Invoices", maxLevel: "delete" },
 ];
@@ -71,6 +72,8 @@ export const PERMISSIONS = {
   ROTA_WRITE: permissionKey("rota", "write"),
   HOLIDAYS_READ: permissionKey("holidays", "read"),
   HOLIDAYS_WRITE: permissionKey("holidays", "write"),
+  PUNCH_READ: permissionKey("punch", "read"),
+  PUNCH_WRITE: permissionKey("punch", "write"),
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

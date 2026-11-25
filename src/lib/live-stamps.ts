@@ -10,6 +10,7 @@ import {
   jobEquipment,
   jobFiles,
   jobs,
+  punches,
   quotes,
   shifts,
   sites,
@@ -46,6 +47,9 @@ export async function getLiveStamps(
     db
       .select({ c: count(), m: max(holidayRequests.updatedAt) })
       .from(holidayRequests),
+  );
+  simple("punch", () =>
+    db.select({ c: count(), m: max(punches.updatedAt) }).from(punches),
   );
   simple("quotes", () =>
     db.select({ c: count(), m: max(quotes.updatedAt) }).from(quotes),
